@@ -19,7 +19,7 @@ jobs:
 
     strategy:
       matrix:
-        os: [windows-latest, ubuntu-latest]
+        os: [windows-latest, ubuntu-latest, macos-latest]
         node: ['12.x']
         python: ['2.x']
         include:
