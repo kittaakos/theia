@@ -23,8 +23,8 @@ console.log('process.argv:', JSON.stringify(process.argv));
 
 // See: https://github.com/eclipse-theia/theia/issues/8779#issuecomment-733747340
 const filter = isWindows
-    ? arg => arg.index(path.join('ext-scripts', 'theia-run.js')) !== -1
-    : arg => arg.index(path.join('.bin', 'run')) !== -1
+    ? arg => arg.indexOf(path.join('ext-scripts', 'theia-run.js')) !== -1
+    : arg => arg.indexOf(path.join('.bin', 'run')) !== -1
 const index = process.argv.findIndex(filter);
 const args = process.argv.slice(index + 1);
 
