@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - master
-      - gh-actions # TODO: remove this.
+      - gh-actions--fix-macos # TODO: remove this.
   workflow_dispatch:
   pull_request:
     branches:
