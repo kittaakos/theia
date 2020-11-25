@@ -12,5 +12,6 @@
       "skipGit": true,
       "registry": "https://registry.npmjs.org/"
     }
-  }
+  },
+  "loglevel": "silly"
 }
