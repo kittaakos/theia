@@ -18,9 +18,17 @@
 // @ts-check
 const path = require('path');
 
-const index = process.argv.findIndex(arg => arg.indexOf(path.join('.bin/run')) !== -1); // TODO: make this better: https://github.com/eclipse-theia/theia/issues/8779
+console.log('process.argv:', JSON.stringify(process.argv));
+
+const index = process.argv.findIndex(arg => arg.indexOf(path.join('.bin', 'run')) !== -1);
 const args = process.argv.slice(index + 1);
+
+console.log('args:', JSON.stringify(args));
 const scopedArgs = args.length > 1 ? [args[0], '--scope', ...args.slice(1)] : args;
+
+console.log('scopedArgs:', JSON.stringify(args));
 process.argv = [...process.argv.slice(0, index + 1), 'run', ...scopedArgs];
+
+console.log('modified process.argv:', JSON.stringify(process.argv));
 
 require(path.resolve(__dirname, '..', '..', 'scripts', 'lerna'));
