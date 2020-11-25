@@ -18,7 +18,7 @@
 // @ts-check
 const path = require('path');
 
-const index = process.argv.findIndex(arg => arg.endsWith('run')); // Unsafe: https://github.com/eclipse-theia/theia/issues/8779
+const index = process.argv.findIndex(arg => arg.indexOf(path.join('.bin/run')) !== -1); // TODO: make this better: https://github.com/eclipse-theia/theia/issues/8779
 const args = process.argv.slice(index + 1);
 const scopedArgs = args.length > 1 ? [args[0], '--scope', ...args.slice(1)] : args;
 process.argv = [...process.argv.slice(0, index + 1), 'run', ...scopedArgs];
