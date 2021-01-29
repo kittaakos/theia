@@ -14,7 +14,7 @@
  * SPDX-License-Identifier: EPL-2.0 OR GPL-2.0 WITH Classpath-exception-2.0
  ********************************************************************************/
 
-import { ContainerModule } from 'inversify';
+import { interfaces, ContainerModule } from 'inversify';
 import { bindDynamicLabelProvider } from './label/sample-dynamic-label-provider-command-contribution';
 import { bindSampleUnclosableView } from './view/sample-unclosable-view-contribution';
 import { bindSampleOutputChannelWithSeverity } from './output/sample-output-channel-with-severity';
@@ -23,10 +23,10 @@ import { bindSampleFileWatching } from './file-watching/sample-file-watching-con
 
 import '../../src/browser/style/branding.css';
 
-export default new ContainerModule(bind => {
+export default new ContainerModule((bind: interfaces.Bind, unbind: interfaces.Unbind, isBound: interfaces.IsBound, rebind: interfaces.Rebind) => {
     bindDynamicLabelProvider(bind);
     bindSampleUnclosableView(bind);
     bindSampleOutputChannelWithSeverity(bind);
-    bindSampleMenu(bind);
+    bindSampleMenu(bind, unbind, isBound, rebind);
     bindSampleFileWatching(bind);
 });

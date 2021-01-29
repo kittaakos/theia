@@ -14,8 +14,11 @@
  * SPDX-License-Identifier: EPL-2.0 OR GPL-2.0 WITH Classpath-exception-2.0
  ********************************************************************************/
 
+import { FrontendApplication } from '@theia/core/lib/browser';
+import { BrowserMenuBarContribution } from '@theia/core/lib/browser/menu/browser-menu-plugin';
 import { Command, CommandContribution, CommandRegistry, MAIN_MENU_BAR, MenuContribution, MenuModelRegistry, MenuNode, SubMenuOptions } from '@theia/core/lib/common';
-import { injectable, interfaces } from 'inversify';
+import { inject, injectable, interfaces } from 'inversify';
+import { Disposable, DisposableCollection } from '@theia/core/lib/common';
 
 const SampleCommand: Command = {
     id: 'sample-command',
@@ -91,7 +94,73 @@ export class PlaceholderMenuNode implements MenuNode {
 
 }
 
-export const bindSampleMenu = (bind: interfaces.Bind) => {
+@injectable()
+class CustomBrowserMenuBarContribution extends BrowserMenuBarContribution {
+
+    protected toDispose = new DisposableCollection();
+    protected app: FrontendApplication;
+
+    onStart(app: FrontendApplication): void {
+        this.app = app;
+        const logo = this.createLogo();
+        app.shell.addWidget(logo, { area: 'top' });
+        this.creteMenu();
+    }
+
+    private creteMenu(): void {
+        this.toDispose.dispose();
+        const menu = this.factory.createMenuBar();
+        this.toDispose.push(Disposable.create(() => menu.dispose()));
+        this.app.shell.addWidget(menu, { area: 'top' });
+    }
+
+    update(): void {
+        this.creteMenu();
+    }
+
+}
+
+@injectable()
+class MenuUpdaterExample implements CommandContribution {
+
+    @inject(CustomBrowserMenuBarContribution)
+    protected updater: CustomBrowserMenuBarContribution;
+
+    @inject(MenuModelRegistry)
+    protected menuModelRegistry: MenuModelRegistry;
+
+    @inject(SampleMenuContribution)
+    protected sampleMenuContribution: SampleMenuContribution;
+
+    protected registered = true;
+
+    registerCommands(registry: CommandRegistry): void {
+        registry.registerCommand({ id: 'remove-sample-menu', label: "Remove 'Sample Menu'" }, {
+            execute: () => {
+                this.menuModelRegistry.unregisterMenuNode('sample-menu');
+                this.updater.update();
+                this.registered = false;
+            },
+            isEnabled: () => this.registered
+        });
+        registry.registerCommand({ id: 'add-sample-menu', label: "Add 'Sample Menu'" }, {
+            execute: () => {
+                this.sampleMenuContribution.registerMenus(this.menuModelRegistry);
+                this.updater.update();
+                this.registered = true;
+            },
+            isEnabled: () => !this.registered
+        });
+    }
+
+}
+
+export const bindSampleMenu = (bind: interfaces.Bind, unbind: interfaces.Unbind, isBound: interfaces.IsBound, rebind: interfaces.Rebind) => {
     bind(CommandContribution).to(SampleCommandContribution).inSingletonScope();
-    bind(MenuContribution).to(SampleMenuContribution).inSingletonScope();
+    bind(SampleMenuContribution).toSelf().inSingletonScope();
+    bind(MenuContribution).toService(SampleMenuContribution);
+    bind(MenuUpdaterExample).toSelf().inSingletonScope();
+    bind(CommandContribution).toService(MenuUpdaterExample);
+    bind(CustomBrowserMenuBarContribution).toSelf().inSingletonScope();
+    rebind(BrowserMenuBarContribution).toService(CustomBrowserMenuBarContribution);
 };
