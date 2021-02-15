@@ -51,7 +51,13 @@ class SendContribution implements CommandContribution {
 
     @postConstruct()
     protected init(): void {
-        this.send.setClient({ notify: ({ text }) => this.commandRegistry.executeCommand(OutputCommands.APPEND_LINE.id, { name: 'API Sample: Send', text }) });
+        const requestMessage = () => {
+            this.send.requestMessage().then(({ text }) => {
+                this.commandRegistry.executeCommand(OutputCommands.APPEND_LINE.id, { name: 'API Sample: Send', text });
+                requestMessage();
+            });
+        };
+        requestMessage();
     }
 
     registerCommands(registry: CommandRegistry): void {

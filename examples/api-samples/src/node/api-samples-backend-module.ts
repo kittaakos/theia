@@ -15,52 +15,57 @@
  ********************************************************************************/
 
 import { injectable, ContainerModule } from 'inversify';
+import { Emitter } from '@theia/core/lib/common/event';
 import { ConnectionContainerModule } from '@theia/core/lib/node/messaging/connection-container-module';
-import { Send, SendClient, SendPath } from '../common/send';
+import { Send, SendPath } from '../common/send';
 
 export default new ContainerModule(bind => {
     bind(ConnectionContainerModule).toConstantValue(ConnectionContainerModule.create(({ bind, bindBackendService }) => {
         bind(SendServer).toSelf().inSingletonScope();
         bind(Send).toService(SendServer);
-        bindBackendService<Send, SendClient>(SendPath, Send, (server, client) => {
-            server.setClient(client);
-            client.onDidCloseConnection(() => server.dispose());
-            return server;
-        });
+        bindBackendService(SendPath, Send);
     }));
 });
 
 @injectable()
 class SendServer implements Send {
 
-    protected client?: SendClient;
+    protected onDidOfferEmitter = new Emitter<void>();
+    protected messages: string[] = [];
     protected timeout?: NodeJS.Timeout;
 
-    async toggleMessages(): Promise<void> {
+    toggleMessages(): void {
         if (this.timeout) {
-            this.send('Stopping message stream.');
-            this.dispose();
+            this.stop();
         } else {
-            this.send('Starting message stream.');
-            this.timeout = setInterval(() => this.send(), 1);
+            this.timeout = setInterval(() => this.queue(), 1);
         }
     }
 
-    setClient(client: SendClient | undefined): void {
-        this.client = client;
+    async requestMessage(): Promise<{ text: string }> {
+        const first = this.messages.shift();
+        if (first) {
+            return { text: first };
+        }
+        return new Promise<{ text: string }>(resolve => {
+            const toDispose = this.onDidOfferEmitter.event(() => {
+                toDispose.dispose();
+                resolve(this.requestMessage());
+            });
+        });
     }
 
-    dispose(): void {
+    private stop(): void {
         if (this.timeout) {
-            clearTimeout(this.timeout);
+            this.messages.length = 0;
+            clearInterval(this.timeout);
             this.timeout = undefined;
         }
     }
 
-    private send(text: string = `${Date.now()}`): void {
-        if (this.client) {
-            this.client.notify({ text });
-        }
+    private queue(text: string = `${Date.now()}`): void {
+        this.messages.push(text);
+        this.onDidOfferEmitter.fire();
     }
 
 }

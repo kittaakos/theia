@@ -14,14 +14,9 @@
  * SPDX-License-Identifier: EPL-2.0 OR GPL-2.0 WITH Classpath-exception-2.0
  ********************************************************************************/
 
-import { JsonRpcServer } from '@theia/core/lib/common';
-
 export const SendPath = '/services/send';
 export const Send = Symbol('Send');
-export interface Send extends JsonRpcServer<SendClient> {
-    toggleMessages(): Promise<void>;
-}
-
-export interface SendClient {
-    notify(message: { text: string }): void;
+export interface Send {
+    toggleMessages(): void;
+    requestMessage(): Promise<{ text: string }>;
 }
