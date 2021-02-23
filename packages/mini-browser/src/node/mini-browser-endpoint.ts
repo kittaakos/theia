@@ -16,7 +16,7 @@
 
 const vhost = require('vhost');
 import express = require('express');
-import * as fs from 'fs-extra';
+import { promises as fs, Stats } from 'fs';
 import { lookup } from 'mime-types';
 import { injectable, inject, named } from 'inversify';
 import { Application, Request, Response } from 'express';
@@ -36,7 +36,7 @@ export interface FileStatWithContent {
     /**
      * The file stat.
      */
-    readonly stat: fs.Stats & { uri: string };
+    readonly stat: Stats & { uri: string };
 
     /**
      * The content of the file as a UTF-8 encoded string.
@@ -119,11 +119,15 @@ export class MiniBrowserEndpoint implements BackendApplicationContribution, Mini
     }
 
     protected async response(uri: string, response: Response): Promise<Response> {
-        const exists = await fs.pathExists(FileUri.fsPath(uri));
-        if (!exists) {
-            return this.missingResourceHandler()(uri, response);
+        let statWithContent: FileStatWithContent | undefined = undefined;
+        try {
+            statWithContent = await this.readContent(uri);
+        } catch (e) {
+            if ('code' in e && e.code === 'ENOENT') {
+                return this.missingResourceHandler()(uri, response);
+            }
+            return this.errorHandler()(e, uri, response);
         }
-        const statWithContent = await this.readContent(uri);
         try {
             if (!statWithContent.stat.isDirectory()) {
                 const extension = uri.split('.').pop();
@@ -248,15 +252,15 @@ export class ImageHandler implements MiniBrowserEndpointHandler {
         return CODE_EDITOR_PRIORITY + 1;
     }
 
-    respond(statWithContent: FileStatWithContent, response: Response): MaybePromise<Response> {
-        fs.readFile(FileUri.fsPath(statWithContent.stat.uri), (error, data) => {
-            if (error) {
-                throw error;
-            }
+    async respond(statWithContent: FileStatWithContent, response: Response): Promise<Response> {
+        try {
+            const data = await fs.readFile(FileUri.fsPath(statWithContent.stat.uri), { encoding: 'utf8' });
             response.contentType('image/jpeg');
             response.send(data);
-        });
-        return response;
+            return response;
+        } catch (error) {
+            throw error;
+        }
     }
 
 }
@@ -275,7 +279,7 @@ export class PdfHandler implements MiniBrowserEndpointHandler {
         return CODE_EDITOR_PRIORITY + 1;
     }
 
-    respond(statWithContent: FileStatWithContent, response: Response): MaybePromise<Response> {
+    async respond(statWithContent: FileStatWithContent, response: Response): Promise<Response> {
         // https://stackoverflow.com/questions/11598274/display-pdf-in-browser-using-express-js
         const encodeRFC5987ValueChars = (input: string) =>
             encodeURIComponent(input).
@@ -286,16 +290,16 @@ export class PdfHandler implements MiniBrowserEndpointHandler {
                 replace(/%(?:7C|60|5E)/g, unescape);
 
         const fileName = FileUri.create(statWithContent.stat.uri).path.base;
-        fs.readFile(FileUri.fsPath(statWithContent.stat.uri), (error, data) => {
-            if (error) {
-                throw error;
-            }
+        try {
+            const data = await fs.readFile(FileUri.fsPath(statWithContent.stat.uri), { encoding: 'utf8' });
             // Change `inline` to `attachment` if you would like to force downloading the PDF instead of previewing in the browser.
             response.setHeader('Content-disposition', `inline; filename*=UTF-8''${encodeRFC5987ValueChars(fileName)}`);
             response.contentType('application/pdf');
             response.send(data);
-        });
-        return response;
+            return response;
+        } catch (error) {
+            throw error;
+        }
     }
 
 }

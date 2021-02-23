@@ -16,7 +16,7 @@
 
 import * as os from 'os';
 import * as path from 'path';
-import * as fs from 'fs-extra';
+import * as fs from 'fs';
 import { v4 as uuidv4 } from 'uuid';
 import * as requestretry from 'requestretry';
 import { injectable, inject } from 'inversify';
@@ -35,8 +35,8 @@ export class VSXExtensionResolver implements PluginDeployerResolver {
 
     constructor() {
         this.downloadPath = path.resolve(os.tmpdir(), uuidv4());
-        fs.ensureDirSync(this.downloadPath);
-        fs.emptyDirSync(this.downloadPath);
+        fs.rmdirSync(this.downloadPath, { recursive: true });
+        fs.mkdirSync(this.downloadPath, { recursive: true });
     }
 
     accept(pluginId: string): boolean {

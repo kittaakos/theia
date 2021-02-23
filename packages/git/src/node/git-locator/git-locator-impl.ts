@@ -14,7 +14,7 @@
  * SPDX-License-Identifier: EPL-2.0 OR GPL-2.0 WITH Classpath-exception-2.0
  ********************************************************************************/
 
-import * as fs from 'fs-extra';
+import { promises as fs } from 'fs';
 import * as path from 'path';
 import { GitLocator, GitLocateOptions } from './git-locator-protocol';
 
@@ -59,7 +59,7 @@ export class GitLocatorImpl implements GitLocator {
     }
 
     protected async doLocate(basePath: string, context: GitLocateContext): Promise<string[]> {
-        const realBasePath = fs.realpathSync(basePath);
+        const realBasePath = await fs.realpath(basePath);
         if (context.visited.has(realBasePath)) {
             return [];
         }
@@ -77,9 +77,9 @@ export class GitLocatorImpl implements GitLocator {
                 }
             });
             if (context.maxCount >= 0 && paths.length >= context.maxCount) {
-                return paths.slice(0, context.maxCount).map(GitLocatorImpl.map);
+                return Promise.all(paths.slice(0, context.maxCount).map(GitLocatorImpl.map));
             }
-            const repositoryPaths = paths.map(GitLocatorImpl.map);
+            const repositoryPaths = await Promise.all(paths.map(GitLocatorImpl.map));
             return this.locateFrom(
                 newContext => this.generateNested(repositoryPaths, newContext),
                 context,
@@ -95,20 +95,14 @@ export class GitLocatorImpl implements GitLocator {
             yield this.locateNested(repository, context);
         }
     }
-    protected locateNested(repositoryPath: string, context: GitLocateContext): Promise<string[]> {
-        return new Promise<string[]>(resolve => {
-            fs.readdir(repositoryPath, async (err, files) => {
-                if (err) {
-                    this.options.error(err.message, err);
-                    resolve([]);
-                } else {
-                    resolve(this.locateFrom(
-                        newContext => this.generateRepositories(repositoryPath, files, newContext),
-                        context
-                    ));
-                }
-            });
-        });
+    protected async locateNested(repositoryPath: string, context: GitLocateContext): Promise<string[]> {
+        try {
+            const files = await fs.readdir(repositoryPath);
+            return this.locateFrom(newContext => this.generateRepositories(repositoryPath, files, newContext), context);
+        } catch (err) {
+            this.options.error(err.message, err);
+            return [];
+        }
     }
 
     protected * generateRepositories(repositoryPath: string, files: string[], context: GitLocateContext): IterableIterator<Promise<string[]>> {
@@ -145,8 +139,8 @@ export class GitLocatorImpl implements GitLocator {
         return result;
     }
 
-    static map(repository: string): string {
-        return fs.realpathSync(path.dirname(repository));
+    static async map(repository: string): Promise<string> {
+        return fs.realpath(path.dirname(repository));
     }
 
 }

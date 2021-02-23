@@ -18,7 +18,7 @@ import * as upath from 'upath';
 
 import * as path from 'path';
 import * as temp from 'temp';
-import * as fs from 'fs-extra';
+import { promises as fs } from 'fs';
 import { expect } from 'chai';
 import { Git } from '../common/git';
 import { git as gitExec } from 'dugite-extra/lib/core/git';
@@ -45,9 +45,9 @@ describe('git', async function (): Promise<void> {
         it('should discover only first repository', async () => {
 
             const root = track.mkdirSync('discovery-test-1');
-            fs.mkdirSync(path.join(root, 'A'));
-            fs.mkdirSync(path.join(root, 'B'));
-            fs.mkdirSync(path.join(root, 'C'));
+            await fs.mkdir(path.join(root, 'A'));
+            await fs.mkdir(path.join(root, 'B'));
+            await fs.mkdir(path.join(root, 'C'));
             const git = await createGit();
             await initRepository(path.join(root, 'A'));
             await initRepository(path.join(root, 'B'));
@@ -61,9 +61,9 @@ describe('git', async function (): Promise<void> {
         it('should discover all nested repositories', async () => {
 
             const root = track.mkdirSync('discovery-test-2');
-            fs.mkdirSync(path.join(root, 'A'));
-            fs.mkdirSync(path.join(root, 'B'));
-            fs.mkdirSync(path.join(root, 'C'));
+            await fs.mkdir(path.join(root, 'A'));
+            await fs.mkdir(path.join(root, 'B'));
+            await fs.mkdir(path.join(root, 'C'));
             const git = await createGit();
             await initRepository(path.join(root, 'A'));
             await initRepository(path.join(root, 'B'));
@@ -82,10 +82,10 @@ describe('git', async function (): Promise<void> {
             }
 
             const root = track.mkdirSync('discovery-test-3');
-            fs.mkdirSync(path.join(root, 'BASE'));
-            fs.mkdirSync(path.join(root, 'BASE', 'A'));
-            fs.mkdirSync(path.join(root, 'BASE', 'B'));
-            fs.mkdirSync(path.join(root, 'BASE', 'C'));
+            await fs.mkdir(path.join(root, 'BASE'));
+            await fs.mkdir(path.join(root, 'BASE', 'A'));
+            await fs.mkdir(path.join(root, 'BASE', 'B'));
+            await fs.mkdir(path.join(root, 'BASE', 'C'));
             const git = await createGit();
             await initRepository(path.join(root, 'BASE'));
             await initRepository(path.join(root, 'BASE', 'A'));
@@ -100,11 +100,11 @@ describe('git', async function (): Promise<void> {
         it('should discover all nested repositories and the container repository', async () => {
 
             const root = track.mkdirSync('discovery-test-4');
-            fs.mkdirSync(path.join(root, 'BASE'));
-            fs.mkdirSync(path.join(root, 'BASE', 'WS_ROOT'));
-            fs.mkdirSync(path.join(root, 'BASE', 'WS_ROOT', 'A'));
-            fs.mkdirSync(path.join(root, 'BASE', 'WS_ROOT', 'B'));
-            fs.mkdirSync(path.join(root, 'BASE', 'WS_ROOT', 'C'));
+            await fs.mkdir(path.join(root, 'BASE'));
+            await fs.mkdir(path.join(root, 'BASE', 'WS_ROOT'));
+            await fs.mkdir(path.join(root, 'BASE', 'WS_ROOT', 'A'));
+            await fs.mkdir(path.join(root, 'BASE', 'WS_ROOT', 'B'));
+            await fs.mkdir(path.join(root, 'BASE', 'WS_ROOT', 'C'));
             const git = await createGit();
             await initRepository(path.join(root, 'BASE'));
             await initRepository(path.join(root, 'BASE', 'WS_ROOT', 'A'));
@@ -137,8 +137,8 @@ describe('git', async function (): Promise<void> {
             // Modify a file.
             const filePath = path.join(root, 'A.txt');
             const fileUri = FileUri.create(filePath).toString();
-            fs.writeFileSync(filePath, 'new content');
-            expect(fs.readFileSync(filePath, { encoding: 'utf8' })).to.be.equal('new content');
+            await fs.writeFile(filePath, 'new content');
+            expect((await fs.readFile(filePath, { encoding: 'utf8' }))).to.be.equal('new content');
             await git.add(repository, fileUri);
 
             // Check the status again. Expect one single change.
@@ -148,8 +148,8 @@ describe('git', async function (): Promise<void> {
             expect(status.changes[0].staged).to.be.true;
 
             // Change the same file again.
-            fs.writeFileSync(filePath, 'yet another new content');
-            expect(fs.readFileSync(filePath, { encoding: 'utf8' })).to.be.equal('yet another new content');
+            await fs.writeFile(filePath, 'yet another new content');
+            expect((await fs.readFile(filePath, { encoding: 'utf8' }))).to.be.equal('yet another new content');
 
             // We expect two changes; one is staged, the other is in the working directory.
             status = await git.status(repository);
@@ -225,24 +225,24 @@ describe('git', async function (): Promise<void> {
 
         it('modified in working directory', async () => {
             const repositoryPath = FileUri.fsPath(repository!.localUri);
-            fs.writeFileSync(path.join(repositoryPath, 'A.txt'), 'new content');
-            expect(fs.readFileSync(path.join(repositoryPath, 'A.txt'), { encoding: 'utf8' })).to.be.equal('new content');
+            await fs.writeFile(path.join(repositoryPath, 'A.txt'), 'new content');
+            expect((await fs.readFile(path.join(repositoryPath, 'A.txt'), { encoding: 'utf8' }))).to.be.equal('new content');
             const content = await git!.show(repository!, FileUri.create(path.join(repositoryPath, 'A.txt')).toString(), { commitish: 'HEAD' });
             expect(content).to.be.equal('A');
         });
 
         it('modified in working directory (nested)', async () => {
             const repositoryPath = FileUri.fsPath(repository!.localUri);
-            fs.writeFileSync(path.join(repositoryPath, 'folder', 'C.txt'), 'new content');
-            expect(fs.readFileSync(path.join(repositoryPath, 'folder', 'C.txt'), { encoding: 'utf8' })).to.be.equal('new content');
+            await fs.writeFile(path.join(repositoryPath, 'folder', 'C.txt'), 'new content');
+            expect((await fs.readFile(path.join(repositoryPath, 'folder', 'C.txt'), { encoding: 'utf8' }))).to.be.equal('new content');
             const content = await git!.show(repository!, FileUri.create(path.join(repositoryPath, 'folder', 'C.txt')).toString(), { commitish: 'HEAD' });
             expect(content).to.be.equal('C');
         });
 
         it('modified in index', async () => {
             const repositoryPath = FileUri.fsPath(repository!.localUri);
-            fs.writeFileSync(path.join(repositoryPath, 'A.txt'), 'new content');
-            expect(fs.readFileSync(path.join(repositoryPath, 'A.txt'), { encoding: 'utf8' })).to.be.equal('new content');
+            await fs.writeFile(path.join(repositoryPath, 'A.txt'), 'new content');
+            expect((await fs.readFile(path.join(repositoryPath, 'A.txt'), { encoding: 'utf8' }))).to.be.equal('new content');
             await git!.add(repository!, FileUri.create(path.join(repositoryPath, 'A.txt')).toString());
             const content = await git!.show(repository!, FileUri.create(path.join(repositoryPath, 'A.txt')).toString(), { commitish: 'index' });
             expect(content).to.be.equal('new content');
@@ -250,8 +250,8 @@ describe('git', async function (): Promise<void> {
 
         it('modified in index and in working directory', async () => {
             const repositoryPath = FileUri.fsPath(repository!.localUri);
-            fs.writeFileSync(path.join(repositoryPath, 'A.txt'), 'new content');
-            expect(fs.readFileSync(path.join(repositoryPath, 'A.txt'), { encoding: 'utf8' })).to.be.equal('new content');
+            await fs.writeFile(path.join(repositoryPath, 'A.txt'), 'new content');
+            expect((await fs.readFile(path.join(repositoryPath, 'A.txt'), { encoding: 'utf8' }))).to.be.equal('new content');
             await git!.add(repository!, FileUri.create(path.join(repositoryPath, 'A.txt')).toString());
             expect(await git!.show(repository!, FileUri.create(path.join(repositoryPath, 'A.txt')).toString(), { commitish: 'index' })).to.be.equal('new content');
             expect(await git!.show(repository!, FileUri.create(path.join(repositoryPath, 'A.txt')).toString(), { commitish: 'HEAD' })).to.be.equal('A');
@@ -416,7 +416,6 @@ describe('git', async function (): Promise<void> {
 
             const git = await createGit();
             await init(git, repository);
-            await fs.createFile(filePath);
 
             await writeContentLines(['🍏', '🍏', '🍏', '🍏', '🍏', '🍏']);
             await addAndCommit('six 🍏');
@@ -451,7 +450,6 @@ describe('git', async function (): Promise<void> {
 
             const git = await createGit();
             await init(git, repository);
-            await fs.createFile(filePath);
 
             await writeContentLines(['🍏', '🍏', '🍏', '🍏', '🍏', '🍏']);
             await expectUndefinedBlame();
@@ -486,7 +484,6 @@ describe('git', async function (): Promise<void> {
 
             const git = await createGit();
             await init(git, repository);
-            await fs.createFile(filePath);
 
             await writeContentLines(['🍏', '🍏', '🍏', '🍏', '🍏', '🍏']);
             await addAndCommit('six 🍏');
@@ -532,7 +529,6 @@ describe('git', async function (): Promise<void> {
 
             const git = await createGit();
             await init(git, repository);
-            await fs.createFile(filePath);
 
             await writeContentLines(['🍏']);
             await addAndCommit('add 🍏\n* green\n* red');
@@ -558,7 +554,6 @@ describe('git', async function (): Promise<void> {
             const root = track.mkdirSync('diff-without-ranges');
             const localUri = FileUri.create(root).toString();
             const repository = { localUri };
-            await fs.createFile(path.join(root, 'A.txt'));
             await fs.writeFile(path.join(root, 'A.txt'), 'A content', { encoding: 'utf8' });
             const git = await createGit();
 
@@ -572,7 +567,6 @@ describe('git', async function (): Promise<void> {
             await git.exec(repository, ['add', '.']);
             await git.exec(repository, ['commit', '-m', '"Initialized."']); // HEAD
 
-            await fs.createFile(path.join(root, 'B.txt'));
             await fs.writeFile(path.join(root, 'B.txt'), 'B content', { encoding: 'utf8' });
             await expectDiff([]); // Unstaged (new)
 
@@ -587,7 +581,6 @@ describe('git', async function (): Promise<void> {
             const root = track.mkdirSync('diff-without-ranges');
             const localUri = FileUri.create(root).toString();
             const repository = { localUri };
-            await fs.createFile(path.join(root, 'A.txt'));
             await fs.writeFile(path.join(root, 'A.txt'), 'A content', { encoding: 'utf8' });
             const git = await createGit();
 
@@ -601,7 +594,6 @@ describe('git', async function (): Promise<void> {
             await git.exec(repository, ['add', '.']);
             await git.exec(repository, ['commit', '-m', '"Initialized."']); // HEAD
 
-            await fs.createFile(path.join(root, 'B.txt'));
             await fs.writeFile(path.join(root, 'B.txt'), 'B content', { encoding: 'utf8' });
             await git.add(repository, FileUri.create(path.join(root, 'B.txt')).toString());
             await expectDiff([{ pathSegment: 'B.txt', status: GitFileStatus.New }]); // Staged (new)
@@ -619,14 +611,10 @@ describe('git', async function (): Promise<void> {
             const root = track.mkdirSync('diff-with-ranges');
             const localUri = FileUri.create(root).toString();
             const repository = { localUri };
-            await fs.createFile(path.join(root, 'A.txt'));
             await fs.writeFile(path.join(root, 'A.txt'), 'A content', { encoding: 'utf8' });
-            await fs.createFile(path.join(root, 'B.txt'));
             await fs.writeFile(path.join(root, 'B.txt'), 'B content', { encoding: 'utf8' });
             await fs.mkdir(path.join(root, 'folder'));
-            await fs.createFile(path.join(root, 'folder', 'F1.txt'));
             await fs.writeFile(path.join(root, 'folder', 'F1.txt'), 'F1 content', { encoding: 'utf8' });
-            await fs.createFile(path.join(root, 'folder', 'F2.txt'));
             await fs.writeFile(path.join(root, 'folder', 'F2.txt'), 'F2 content', { encoding: 'utf8' });
             const git = await createGit();
 
@@ -652,24 +640,20 @@ describe('git', async function (): Promise<void> {
             await git.exec(repository, ['add', '.']);
             await git.exec(repository, ['commit', '-m', '"Commit 1 on new-branch."']); // new-branch~2
 
-            await fs.createFile(path.join(root, 'C.txt'));
             await fs.writeFile(path.join(root, 'C.txt'), 'C content', { encoding: 'utf8' });
             await git.exec(repository, ['add', '.']);
             await git.exec(repository, ['commit', '-m', '"Commit 2 on new-branch."']); // new-branch~1
 
-            await fs.createFile(path.join(root, 'B.txt'));
             await fs.writeFile(path.join(root, 'B.txt'), 'B content', { encoding: 'utf8' });
             await git.exec(repository, ['add', '.']);
             await git.exec(repository, ['commit', '-m', '"Commit 3 on new-branch."']); // new-branch
 
             await git.exec(repository, ['checkout', 'master']);
 
-            await fs.createFile(path.join(root, 'C.txt'));
             await fs.writeFile(path.join(root, 'C.txt'), 'C content', { encoding: 'utf8' });
             await git.exec(repository, ['add', '.']);
             await git.exec(repository, ['commit', '-m', '"Commit 2 on master."']); // HEAD~3
 
-            await fs.createFile(path.join(root, 'D.txt'));
             await fs.writeFile(path.join(root, 'D.txt'), 'D content', { encoding: 'utf8' });
             await git.exec(repository, ['add', '.']);
             await git.exec(repository, ['commit', '-m', '"Commit 3 on master."']); // HEAD~2
@@ -680,7 +664,6 @@ describe('git', async function (): Promise<void> {
 
             await fs.unlink(path.join(root, 'folder', 'F1.txt'));
             await fs.writeFile(path.join(root, 'folder', 'F2.txt'), 'updated F2 content', { encoding: 'utf8' });
-            await fs.createFile(path.join(root, 'folder', 'F3 with space.txt'));
             await fs.writeFile(path.join(root, 'folder', 'F3 with space.txt'), 'F3 content', { encoding: 'utf8' });
             await git.exec(repository, ['add', '.']);
             await git.exec(repository, ['commit', '-m', '"Commit 5 on master."']); // HEAD

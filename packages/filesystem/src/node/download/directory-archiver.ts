@@ -15,7 +15,7 @@
  ********************************************************************************/
 
 import { injectable } from 'inversify';
-import * as fs from 'fs-extra';
+import * as fs from 'fs';
 import { pack } from 'tar-fs';
 import URI from '@theia/core/lib/common/uri';
 import { FileUri } from '@theia/core/lib/node/file-uri';
@@ -96,7 +96,7 @@ export class DirectoryArchiver {
 
     protected async isDir(uri: URI): Promise<boolean> {
         try {
-            const stat = await fs.stat(FileUri.fsPath(uri));
+            const stat = await fs.promises.stat(FileUri.fsPath(uri));
             return stat.isDirectory();
         } catch {
             return false;

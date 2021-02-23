@@ -15,7 +15,7 @@
  ********************************************************************************/
 
 import * as path from 'path';
-import * as fs from 'fs-extra';
+import { promises as fs } from 'fs';
 import * as cp from 'child_process';
 import { ApplicationPackage, ApplicationPackageOptions } from '@theia/application-package';
 import { WebpackGenerator, FrontendGenerator, BackendGenerator } from './generator';
@@ -42,8 +42,18 @@ export class ApplicationPackageManager {
     }
 
     protected async remove(fsPath: string): Promise<void> {
-        if (await fs.pathExists(fsPath)) {
-            await fs.remove(fsPath);
+        try {
+            const stat = await fs.stat(fsPath);
+            if (stat.isDirectory()) {
+                await fs.rmdir(fsPath);
+            } else {
+                await fs.unlink(fsPath);
+            }
+        } catch (e) {
+            if ('code' in e && e.code === 'ENOENT') {
+                return;
+            }
+            throw e;
         }
     }
 
@@ -60,8 +70,8 @@ export class ApplicationPackageManager {
     }
 
     async copy(): Promise<void> {
-        await fs.ensureDir(this.pck.lib());
-        await fs.copy(this.pck.frontend('index.html'), this.pck.lib('index.html'));
+        await fs.mkdir(this.pck.lib(), { recursive: true });
+        await fs.copyFile(this.pck.frontend('index.html'), this.pck.lib('index.html'));
     }
 
     async build(args: string[] = []): Promise<void> {
@@ -92,7 +102,7 @@ export class ApplicationPackageManager {
             );
         }
 
-        const { mainArgs, options } = this.adjustArgs([ appPath, ...args ]);
+        const { mainArgs, options } = this.adjustArgs([appPath, ...args]);
         const electronCli = require.resolve('electron/cli.js', { paths: [this.pck.projectPath] });
         return this.__process.fork(electronCli, mainArgs, options);
     }

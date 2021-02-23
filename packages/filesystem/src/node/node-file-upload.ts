@@ -16,7 +16,7 @@
 
 import * as path from 'path';
 import * as crypto from 'crypto';
-import * as fs from 'fs-extra';
+import { promises as fs } from 'fs';
 import { Buffer } from 'buffer';
 import { Disposable } from '@theia/core/lib/common/disposable';
 import { FileUri } from '@theia/core/lib/node/file-uri';
@@ -41,7 +41,8 @@ export class NodeFileUpload implements Disposable {
     }
 
     async create(): Promise<void> {
-        await fs.outputFile(this.uploadPath, '');
+        await fs.mkdir(path.dirname(this.uploadPath), { recursive: true });
+        await fs.writeFile(this.uploadPath, '');
     }
 
     async append(chunk: ArrayBuffer): Promise<void> {
@@ -50,7 +51,7 @@ export class NodeFileUpload implements Disposable {
     }
 
     async rename(): Promise<void> {
-        await fs.move(this.uploadPath, this.fsPath, { overwrite: true });
+        await fs.rename(this.uploadPath, this.fsPath);
         this.dispose = () => Promise.resolve();
     }
 

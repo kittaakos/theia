@@ -19,7 +19,7 @@ import * as http from 'http';
 import * as https from 'https';
 import * as express from 'express';
 import * as yargs from 'yargs';
-import * as fs from 'fs-extra';
+import { promises as fs } from 'fs';
 import { performance, PerformanceObserver } from 'perf_hooks';
 import { inject, named, injectable, postConstruct } from 'inversify';
 import { ContributionProvider, MaybePromise } from '../common';
@@ -316,9 +316,19 @@ export class BackendApplication {
 
         const gzUrl = `${req.url}.gz`;
         const gzPath = path.join(this.applicationPackage.projectPath, 'lib', gzUrl);
-        if (acceptedEncodings.indexOf('gzip') === -1 || !(await fs.pathExists(gzPath))) {
+        if (acceptedEncodings.indexOf('gzip') === -1) {
             next();
             return;
+        }
+
+        try {
+            await fs.readFile(gzPath);
+        } catch (e) {
+            if ('code' in e && e.code === 'ENOENT') {
+                next();
+                return;
+            }
+            throw e;
         }
 
         req.url = gzUrl;

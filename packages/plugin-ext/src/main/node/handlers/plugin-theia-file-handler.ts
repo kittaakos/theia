@@ -17,7 +17,7 @@
 import { PluginDeployerFileHandler, PluginDeployerEntry, PluginDeployerFileHandlerContext, PluginType } from '../../../common/plugin-protocol';
 import { injectable, inject } from 'inversify';
 import { getTempDir } from '../temp-dir-util';
-import * as fs from 'fs-extra';
+import { promises as fs } from 'fs';
 import * as filenamify from 'filenamify';
 import { FileUri } from '@theia/core/lib/node/file-uri';
 import { PluginTheiaEnvironment } from '../../common/plugin-theia-environment';
@@ -38,10 +38,19 @@ export class PluginTheiaFileHandler implements PluginDeployerFileHandler {
         const id = context.pluginEntry().id();
         const pluginDir = await this.getPluginDir(context);
         console.log(`[${id}]: trying to decompress into "${pluginDir}"...`);
-        if (context.pluginEntry().type === PluginType.User && await fs.pathExists(pluginDir)) {
-            console.log(`[${id}]: already found`);
-            context.pluginEntry().updatePath(pluginDir);
-            return;
+        if (context.pluginEntry().type === PluginType.User) {
+            try {
+                await fs.access(pluginDir);
+                console.log(`[${id}]: already found`);
+                context.pluginEntry().updatePath(pluginDir);
+                return;
+            } catch (e) {
+                if ('code' in e && e.code === 'ENOENT') {
+                    // ignore.
+                } else {
+                    throw e;
+                }
+            }
         }
         await context.unzip(context.pluginEntry().path(), pluginDir);
         console.log(`[${id}]: decompressed`);

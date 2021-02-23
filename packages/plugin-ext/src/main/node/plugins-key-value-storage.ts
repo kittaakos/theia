@@ -15,7 +15,7 @@
  ********************************************************************************/
 
 import { injectable, inject, postConstruct } from 'inversify';
-import * as fs from 'fs-extra';
+import { promises as fs } from 'fs';
 import * as path from 'path';
 import { FileUri } from '@theia/core/lib/node/file-uri';
 import { Deferred } from '@theia/core/lib/common/promise-util';
@@ -41,10 +41,7 @@ export class PluginsKeyValueStorage {
         try {
             const configDirUri = await this.envServer.getConfigDirUri();
             const globalStorageFsPath = path.join(FileUri.fsPath(configDirUri), PluginPaths.PLUGINS_GLOBAL_STORAGE_DIR);
-            const exists = await fs.pathExists(globalStorageFsPath);
-            if (!exists) {
-                await fs.mkdirs(globalStorageFsPath);
-            }
+            await fs.mkdir(globalStorageFsPath, { recursive: true });
             const globalDataFsPath = path.join(globalStorageFsPath, 'global-state.json');
             this.deferredGlobalDataPath.resolve(globalDataFsPath);
         } catch (e) {
@@ -97,20 +94,21 @@ export class PluginsKeyValueStorage {
     }
 
     private async readFromFile(pathToFile: string): Promise<KeysToKeysToAnyValue> {
-        if (!await fs.pathExists(pathToFile)) {
-            return {};
-        }
         try {
-            return await fs.readJSON(pathToFile);
+            const raw = await fs.readFile(pathToFile, { encoding: 'utf8' });
+            return JSON.parse(raw);
         } catch (error) {
+            if ('code' in error && error.code === 'ENOENT') {
+                return {};
+            }
             console.error('Failed to parse data from "', pathToFile, '". Reason:', error);
             return {};
         }
     }
 
     private async writeToFile(pathToFile: string, data: KeysToKeysToAnyValue): Promise<void> {
-        await fs.ensureDir(path.dirname(pathToFile));
-        await fs.writeJSON(pathToFile, data);
+        await fs.mkdir(path.dirname(pathToFile), { recursive: true });
+        await fs.writeFile(pathToFile, JSON.stringify(data));
     }
 
 }

@@ -16,7 +16,7 @@
 
 import * as temp from 'temp';
 import * as chai from 'chai';
-import * as fs from 'fs-extra';
+import { promises as fs } from 'fs';
 import * as assert from 'assert';
 import URI from '@theia/core/lib/common/uri';
 import { FileUri } from '@theia/core/lib/node';
@@ -36,7 +36,8 @@ describe('nsfw-filesystem-watcher', function (): void {
     this.timeout(10000);
 
     beforeEach(async () => {
-        root = FileUri.create(fs.realpathSync(temp.mkdirSync('node-fs-root')));
+        const rootPath = await fs.realpath(temp.mkdirSync('node-fs-root'));
+        root = FileUri.create(rootPath);
         watcherService = createNsfwFileSystemWatcherService();
         watcherId = await watcherService.watchFileChanges(0, root.toString());
         await sleep(2000);
@@ -68,16 +69,16 @@ describe('nsfw-filesystem-watcher', function (): void {
             root.withPath(root.path.join('foo', 'bar', 'baz.txt')).toString()
         ];
 
-        fs.mkdirSync(FileUri.fsPath(root.resolve('foo')));
-        expect(fs.statSync(FileUri.fsPath(root.resolve('foo'))).isDirectory()).to.be.true;
+        await fs.mkdir(FileUri.fsPath(root.resolve('foo')), { recursive: true });
+        expect((await fs.stat(FileUri.fsPath(root.resolve('foo')))).isDirectory()).to.be.true;
         await sleep(2000);
 
-        fs.mkdirSync(FileUri.fsPath(root.resolve('foo').resolve('bar')));
-        expect(fs.statSync(FileUri.fsPath(root.resolve('foo').resolve('bar'))).isDirectory()).to.be.true;
+        await fs.mkdir(FileUri.fsPath(root.resolve('foo').resolve('bar')), { recursive: true });
+        expect((await fs.stat(FileUri.fsPath(root.resolve('foo').resolve('bar')))).isDirectory()).to.be.true;
         await sleep(2000);
 
-        fs.writeFileSync(FileUri.fsPath(root.resolve('foo').resolve('bar').resolve('baz.txt')), 'baz');
-        expect(fs.readFileSync(FileUri.fsPath(root.resolve('foo').resolve('bar').resolve('baz.txt')), 'utf8')).to.be.equal('baz');
+        await fs.writeFile(FileUri.fsPath(root.resolve('foo').resolve('bar').resolve('baz.txt')), 'baz');
+        expect((await fs.readFile(FileUri.fsPath(root.resolve('foo').resolve('bar').resolve('baz.txt')), 'utf8'))).to.be.equal('baz');
         await sleep(2000);
 
         assert.deepStrictEqual(expectedUris, [...actualUris]);
@@ -101,16 +102,16 @@ describe('nsfw-filesystem-watcher', function (): void {
         /* Unwatch root */
         watcherService.unwatchFileChanges(watcherId);
 
-        fs.mkdirSync(FileUri.fsPath(root.resolve('foo')));
-        expect(fs.statSync(FileUri.fsPath(root.resolve('foo'))).isDirectory()).to.be.true;
+        await fs.mkdir(FileUri.fsPath(root.resolve('foo')), { recursive: true });
+        expect((await fs.stat(FileUri.fsPath(root.resolve('foo')))).isDirectory()).to.be.true;
         await sleep(2000);
 
-        fs.mkdirSync(FileUri.fsPath(root.resolve('foo').resolve('bar')));
-        expect(fs.statSync(FileUri.fsPath(root.resolve('foo').resolve('bar'))).isDirectory()).to.be.true;
+        await fs.mkdir(FileUri.fsPath(root.resolve('foo').resolve('bar')), { recursive: true });
+        expect((await fs.stat(FileUri.fsPath(root.resolve('foo').resolve('bar')))).isDirectory()).to.be.true;
         await sleep(2000);
 
-        fs.writeFileSync(FileUri.fsPath(root.resolve('foo').resolve('bar').resolve('baz.txt')), 'baz');
-        expect(fs.readFileSync(FileUri.fsPath(root.resolve('foo').resolve('bar').resolve('baz.txt')), 'utf8')).to.be.equal('baz');
+        await fs.writeFile(FileUri.fsPath(root.resolve('foo').resolve('bar').resolve('baz.txt')), 'baz');
+        expect((await fs.readFile(FileUri.fsPath(root.resolve('foo').resolve('bar').resolve('baz.txt')), 'utf8'))).to.be.equal('baz');
         await sleep(2000);
 
         assert.deepStrictEqual(0, actualUris.size);

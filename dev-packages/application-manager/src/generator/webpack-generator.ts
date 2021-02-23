@@ -15,7 +15,7 @@
  ********************************************************************************/
 
 import * as paths from 'path';
-import * as fs from 'fs-extra';
+import { promises as fs } from 'fs';
 import { AbstractGenerator } from './abstract-generator';
 
 export class WebpackGenerator extends AbstractGenerator {
@@ -28,8 +28,13 @@ export class WebpackGenerator extends AbstractGenerator {
     }
 
     protected async shouldGenerateUserWebpackConfig(): Promise<boolean> {
-        if (!(await fs.pathExists(this.configPath))) {
-            return true;
+        try {
+            await fs.readFile(this.configPath);
+        } catch (e) {
+            if ('code' in e && e.code === 'ENOENT') {
+                return true;
+            }
+            throw e;
         }
         const content = await fs.readFile(this.configPath, 'utf8');
         return content.indexOf('gen-webpack') === -1;

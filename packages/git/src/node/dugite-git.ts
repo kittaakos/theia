@@ -14,7 +14,7 @@
  * SPDX-License-Identifier: EPL-2.0 OR GPL-2.0 WITH Classpath-exception-2.0
  ********************************************************************************/
 
-import * as fs from 'fs-extra';
+import { promises as fs } from 'fs';
 import * as Path from 'path';
 import { injectable, inject, postConstruct } from 'inversify';
 import { git } from 'dugite-extra/lib/core/git';
@@ -766,7 +766,8 @@ export class DugiteGit implements Git {
         const out = result.stdout;
         if (out && out.length !== 0) {
             try {
-                return fs.realpathSync(out.trim());
+                const path = await fs.realpath(out.trim());
+                return path;
             } catch (e) {
                 this.logger.error(e);
                 return undefined;

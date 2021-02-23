@@ -15,7 +15,7 @@
  ********************************************************************************/
 
 import * as os from 'os';
-import * as fs from 'fs-extra';
+import { promises as fs, constants, ReadStream, Stats, createReadStream } from 'fs';
 import * as path from 'path';
 import { v4 } from 'uuid';
 import { Request, Response } from 'express';
@@ -56,7 +56,7 @@ export abstract class FileDownloadHandler {
     protected async prepareDownload(request: Request, response: Response, options: PrepareDownloadOptions): Promise<void> {
         const name = path.basename(options.filePath);
         try {
-            await fs.access(options.filePath, fs.constants.R_OK);
+            await fs.access(options.filePath, constants.R_OK);
             const stat = await fs.stat(options.filePath);
             this.fileDownloadCache.addDownload(options.downloadId, { file: options.filePath, remove: options.remove, size: stat.size, root: options.root });
             // do not send filePath but instead use the downloadId
@@ -73,13 +73,13 @@ export abstract class FileDownloadHandler {
         // this sets the content-disposition and content-type automatically
         response.attachment(filePath);
         try {
-            await fs.access(filePath, fs.constants.R_OK);
+            await fs.access(filePath, constants.R_OK);
             response.setHeader('Accept-Ranges', 'bytes');
             // parse range header and combine multiple ranges
             const range = this.parseRangeHeader(request.headers['range'], statSize);
             if (!range) {
                 response.setHeader('Content-Length', statSize);
-                this.streamDownload(OK, response, fs.createReadStream(filePath), id);
+                this.streamDownload(OK, response, createReadStream(filePath), id);
             } else {
                 const rangeStart = range.start;
                 const rangeEnd = range.end;
@@ -92,7 +92,7 @@ export abstract class FileDownloadHandler {
                 response.setHeader('Content-Range', `bytes ${rangeStart}-${rangeEnd}/${statSize}`);
                 response.setHeader('Content-Length', rangeStart === rangeEnd ? 0 : (rangeEnd - rangeStart + 1));
                 response.setHeader('Cache-Control', 'no-cache');
-                this.streamDownload(PARTIAL_CONTENT, response, fs.createReadStream(filePath, { start: rangeStart, end: rangeEnd }), id);
+                this.streamDownload(PARTIAL_CONTENT, response, createReadStream(filePath, { start: rangeStart, end: rangeEnd }), id);
             }
         } catch (e) {
             this.fileDownloadCache.deleteDownload(id);
@@ -102,7 +102,7 @@ export abstract class FileDownloadHandler {
     /**
      * Streams the file and pipe it to the Response to avoid any OOM issues
      */
-    protected streamDownload(status: number, response: Response, stream: fs.ReadStream, id: string): void {
+    protected streamDownload(status: number, response: Response, stream: ReadStream, id: string): void {
         response.status(status);
         stream.on('error', error => {
             this.fileDownloadCache.deleteDownload(id);
@@ -213,7 +213,7 @@ export class SingleFileDownloadHandler extends FileDownloadHandler {
         const uri = new URI(query.uri).toString(true);
         const filePath = FileUri.fsPath(uri);
 
-        let stat: fs.Stats;
+        let stat: Stats;
         try {
             stat = await fs.stat(filePath);
         } catch {

@@ -14,7 +14,7 @@
  * SPDX-License-Identifier: EPL-2.0 OR GPL-2.0 WITH Classpath-exception-2.0
  ********************************************************************************/
 
-import * as fs from 'fs-extra';
+import { promises as fs } from 'fs';
 import * as temp from 'temp';
 import * as path from 'path';
 import { expect } from 'chai';
@@ -72,7 +72,7 @@ describe('git-watcher-slow', () => {
                     ignoredEvents--;
                     if (ignoredEvents === 0) {
                         // Once we consumed all the events we wanted to ignore, make the FS change.
-                        await fs.createFile(path.join(FileUri.fsPath(repository!.localUri), 'A.txt'));
+                        await fs.writeFile(path.join(FileUri.fsPath(repository!.localUri), 'A.txt'), { encoding: 'utf8' });
                         await sleep(6000);
                     }
                 } else {

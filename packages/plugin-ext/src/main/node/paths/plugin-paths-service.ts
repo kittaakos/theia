@@ -17,8 +17,7 @@
 import { injectable, inject } from 'inversify';
 import URI from '@theia/core/lib/common/uri';
 import * as path from 'path';
-import * as fs from 'fs-extra';
-import { readdir, remove } from 'fs-extra';
+import { promises as fs } from 'fs';
 import * as crypto from 'crypto';
 import { ILogger } from '@theia/core';
 import { FileUri } from '@theia/core/lib/node';
@@ -51,7 +50,7 @@ export class PluginPathsServiceImpl implements PluginPathsService {
         }
 
         const pluginDirPath = path.join(parentLogsDir, this.generateTimeFolderName(), 'host');
-        await fs.mkdirs(pluginDirPath);
+        await fs.mkdir(pluginDirPath, { recursive: true });
         // no `await` as We should never wait for the cleanup
         this.cleanupOldLogs(parentLogsDir);
         return pluginDirPath;
@@ -68,11 +67,11 @@ export class PluginPathsServiceImpl implements PluginPathsService {
             return undefined;
         }
 
-        await fs.mkdirs(parentStorageDir);
+        await fs.mkdir(parentStorageDir, { recursive: true });
 
         const storageDirName = await this.buildWorkspaceId(workspaceUri, rootUris);
         const storageDirPath = path.join(parentStorageDir, storageDirName);
-        await fs.mkdirs(storageDirPath);
+        await fs.mkdir(storageDirPath, { recursive: true });
 
         return storageDirPath;
     }
@@ -163,7 +162,7 @@ export class PluginPathsServiceImpl implements PluginPathsService {
             const sessionDirPath = path.resolve(parentLogsDir, sessionDir);
             // we are not waiting for the async `remove` to finish before returning
             // in order to minimize impact on Theia startup time.
-            remove(sessionDirPath);
+            fs.rmdir(sessionDirPath, { recursive: true });
         });
     }
 

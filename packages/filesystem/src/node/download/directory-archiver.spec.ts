@@ -14,7 +14,7 @@
  * SPDX-License-Identifier: EPL-2.0 OR GPL-2.0 WITH Classpath-exception-2.0
  ********************************************************************************/
 
-import * as fs from 'fs-extra';
+import * as fs from 'fs';
 import * as path from 'path';
 import * as temp from 'temp';
 import { extract } from 'tar-fs';
@@ -45,7 +45,7 @@ describe('directory-archiver', () => {
         await archiver.archive(fromPath, path.join(toPath, 'output.tar'));
         expect(fs.existsSync(path.join(toPath, 'output.tar'))).to.be.true;
         const assertPath = track.mkdirSync('assertPath');
-        return new Promise(resolve => {
+        return new Promise<void>(resolve => {
             fs.createReadStream(path.join(toPath, 'output.tar')).pipe(extract(assertPath)).on('finish', () => {
                 expect(fs.readdirSync(assertPath).sort()).to.be.deep.equal(['A.txt', 'B.txt']);
                 expect(fs.readFileSync(path.join(assertPath, 'A.txt'), { encoding: 'utf8' })).to.be.equal(fs.readFileSync(path.join(fromPath, 'A.txt'), { encoding: 'utf8' }));

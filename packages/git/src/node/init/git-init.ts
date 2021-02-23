@@ -17,7 +17,7 @@
 import { injectable, inject } from 'inversify';
 import findGit from 'find-git-exec';
 import { dirname } from 'path';
-import { pathExists } from 'fs-extra';
+import { promises as fs } from 'fs';
 import { ILogger } from '@theia/core/lib/common/logger';
 import { Disposable, DisposableCollection } from '@theia/core/lib/common/disposable';
 import { MessageService } from '@theia/core';
@@ -59,7 +59,7 @@ export class DefaultGitInit implements GitInit {
                 // https://github.com/desktop/dugite/issues/111#issuecomment-323222834
                 // Instead of the executable path, we need the root directory of Git.
                 const dir = dirname(dirname(path));
-                const [execPathOk, pathOk, dirOk] = await Promise.all([pathExists(execPath), pathExists(path), pathExists(dir)]);
+                const [execPathOk, pathOk, dirOk] = await Promise.all([this.pathExists(execPath), this.pathExists(path), this.pathExists(dir)]);
                 if (execPathOk && pathOk && dirOk) {
                     if (typeof env.LOCAL_GIT_DIRECTORY !== 'undefined' && env.LOCAL_GIT_DIRECTORY !== dir) {
                         this.logger.error(`Misconfigured env.LOCAL_GIT_DIRECTORY: ${env.LOCAL_GIT_DIRECTORY}. dir was: ${dir}`);
@@ -86,6 +86,18 @@ export class DefaultGitInit implements GitInit {
 
     dispose(): void {
         this.toDispose.dispose();
+    }
+
+    private async pathExists(path: string): Promise<boolean> {
+        try {
+            const stat = await fs.stat(path);
+            return !!stat;
+        } catch (e) {
+            if ('code' in e && e.code === 'ENOENT') {
+                return false;
+            }
+            throw e;
+        }
     }
 
 }

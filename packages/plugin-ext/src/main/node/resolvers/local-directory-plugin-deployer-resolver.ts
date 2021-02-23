@@ -16,7 +16,7 @@
 
 import { PluginDeployerResolverContext } from '../../../common/plugin-protocol';
 import { injectable } from 'inversify';
-import * as fs from 'fs-extra';
+import { promises as fs } from 'fs';
 import * as path from 'path';
 import { LocalPluginDeployerResolver } from './local-plugin-deployer-resolver';
 

@@ -16,7 +16,7 @@
 
 import * as assert from 'assert';
 import * as temp from 'temp';
-import * as fs from 'fs-extra';
+import * as fs from 'fs';
 import * as path from 'path';
 import { ApplicationPackage } from './application-package';
 import { ApplicationProps } from './application-props';

@@ -16,7 +16,7 @@
 
 import * as path from 'path';
 import * as yargs from 'yargs';
-import * as fs from 'fs-extra';
+import * as fs from 'fs';
 import * as jsoncparser from 'jsonc-parser';
 
 import { injectable, inject, postConstruct } from 'inversify';
@@ -112,19 +112,41 @@ export class DefaultWorkspaceServer implements WorkspaceServer {
         const listUri: string[] = [];
         const data = await this.readRecentWorkspacePathsFromUserHome();
         if (data && data.recentRoots) {
-            data.recentRoots.forEach(element => {
+            for (const element of data.recentRoots) {
                 if (element.length > 0) {
-                    if (this.workspaceStillExist(element)) {
+                    if (await this.workspaceExists(element)) {
                         listUri.push(element);
                     }
                 }
-            });
+            };
         }
         return listUri;
     }
 
+    /**
+     * @deprecated use `workspaceExists` instead.
+     */
     protected workspaceStillExist(workspaceRootUri: string): boolean {
-        return fs.pathExistsSync(FileUri.fsPath(workspaceRootUri));
+        try {
+            return !!fs.statSync(FileUri.fsPath(workspaceRootUri));
+        } catch (e) {
+            if ('code' in e && e.code === 'ENOENT') {
+                return false;
+            }
+            throw e;
+        }
+    }
+
+    protected async workspaceExists(workspaceRootUri: string): Promise<boolean> {
+        try {
+            const stat = await fs.promises.stat(FileUri.fsPath(workspaceRootUri));
+            return !!stat;
+        } catch (e) {
+            if ('code' in e && e.code === 'ENOENT') {
+                return false;
+            }
+            throw e;
+        }
     }
 
     protected async getWorkspaceURIFromCli(): Promise<string | undefined> {
@@ -142,10 +164,8 @@ export class DefaultWorkspaceServer implements WorkspaceServer {
     }
 
     protected async writeToFile(fsPath: string, data: object): Promise<void> {
-        if (!await fs.pathExists(fsPath)) {
-            await fs.mkdirs(path.resolve(fsPath, '..'));
-        }
-        await fs.writeJson(fsPath, data);
+        await fs.promises.mkdir(path.dirname(fsPath), { recursive: true });
+        await fs.promises.writeFile(fsPath, JSON.stringify(data));
     }
 
     /**
@@ -158,10 +178,12 @@ export class DefaultWorkspaceServer implements WorkspaceServer {
     }
 
     protected async readJsonFromFile(fsPath: string): Promise<object | undefined> {
-        if (await fs.pathExists(fsPath)) {
-            const rawContent = await fs.readFile(fsPath, 'utf-8');
+        try {
+            const rawContent = await fs.promises.readFile(fsPath, 'utf-8');
             const strippedContent = jsoncparser.stripComments(rawContent);
             return jsoncparser.parse(strippedContent);
+        } catch {
+            return undefined;
         }
     }
 

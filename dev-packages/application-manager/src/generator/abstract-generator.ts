@@ -15,7 +15,7 @@
  ********************************************************************************/
 
 import * as os from 'os';
-import * as fs from 'fs-extra';
+import { promises as fs } from 'fs';
 import * as yargs from 'yargs';
 import { ApplicationPackage } from '@theia/application-package';
 
@@ -73,7 +73,6 @@ export abstract class AbstractGenerator {
     }
 
     protected async write(path: string, content: string): Promise<void> {
-        await fs.ensureFile(path);
         await fs.writeFile(path, content);
     }
 

@@ -14,7 +14,7 @@
  * SPDX-License-Identifier: EPL-2.0 OR GPL-2.0 WITH Classpath-exception-2.0
  ********************************************************************************/
 
-import * as fs from 'fs-extra';
+import { promises as fs } from 'fs';
 import * as path from 'path';
 import { DebugAdapterExecutable, DebugAdapterContribution } from '../../common/debug-model';
 import { isWindows, isOSX } from '@theia/core/lib/common/os';
@@ -101,7 +101,8 @@ export abstract class AbstractVSCodeDebugAdapterContribution implements DebugAda
         let text = (await fs.readFile(this.pckPath)).toString();
 
         const nlsPath = path.join(this.extensionPath, 'package.nls.json');
-        if (fs.existsSync(nlsPath)) {
+        try {
+            await fs.readFile(nlsPath);
             const nlsMap: {
                 [key: string]: string
             } = require(nlsPath);
@@ -109,6 +110,11 @@ export abstract class AbstractVSCodeDebugAdapterContribution implements DebugAda
                 const value = nlsMap[key].replace(/\"/g, '\\"');
                 text = text.split('%' + key + '%').join(value);
             }
+        } catch (e) {
+            if ('code' in e && e.code === 'ENOENT') {
+                // Ignored
+            }
+            throw e;
         }
 
         return JSON.parse(text);

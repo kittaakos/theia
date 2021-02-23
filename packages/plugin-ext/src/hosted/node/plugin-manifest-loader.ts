@@ -17,15 +17,16 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import * as path from 'path';
-import * as fs from 'fs-extra';
+import { promises as fs } from 'fs';
 
 const NLS_REGEX = /^%([\w\d.-]+)%$/i;
 
 export async function loadManifest(pluginPath: string): Promise<any> {
-    const [manifest, translations] = await Promise.all([
-        fs.readJson(path.join(pluginPath, 'package.json')),
+    const [rawManifest, translations] = await Promise.all([
+        fs.readFile(path.join(pluginPath, 'package.json'), { encoding: 'utf8' }),
         loadTranslations(pluginPath)
     ]);
+    const manifest = JSON.parse(rawManifest);
     // translate vscode builtins, as they are published with a prefix. See https://github.com/theia-ide/vscode-builtin-extensions/blob/master/src/republish.js#L50
     const built_prefix = '@theia/vscode-builtin-';
     if (manifest && manifest.name && manifest.name.startsWith(built_prefix)) {
@@ -38,7 +39,8 @@ export async function loadManifest(pluginPath: string): Promise<any> {
 
 async function loadTranslations(pluginPath: string): Promise<any> {
     try {
-        return await fs.readJson(path.join(pluginPath, 'package.nls.json'));
+        const content = await fs.readFile(path.join(pluginPath, 'package.nls.json'), { encoding: 'utf8' });
+        return JSON.parse(content);
     } catch (e) {
         if (e.code !== 'ENOENT') {
             throw e;

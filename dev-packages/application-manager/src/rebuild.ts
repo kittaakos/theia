@@ -14,7 +14,7 @@
  * SPDX-License-Identifier: EPL-2.0 OR GPL-2.0 WITH Classpath-exception-2.0
  ********************************************************************************/
 
-import fs = require('fs-extra');
+import fs = require('fs');
 import path = require('path');
 
 export function rebuild(target: 'electron' | 'browser', modules: string[] | undefined): void {
@@ -31,14 +31,14 @@ export function rebuild(target: 'electron' | 'browser', modules: string[] | unde
             const src = path.join(nodeModulesPath, module);
             if (fs.existsSync(src)) {
                 const dest = path.join(browserModulesPath, module);
-                const packJson = fs.readJsonSync(path.join(src, 'package.json'));
+                const packJson = JSON.parse(fs.readFileSync(path.join(src, 'package.json'), { encoding: 'utf8' }));
                 dependencies[module] = packJson.version;
-                fs.copySync(src, dest);
+                fs.copyFileSync(src, dest);
             }
         }
         const packFile = path.join(process.cwd(), 'package.json');
         const packageText = fs.readFileSync(packFile);
-        const pack = fs.readJsonSync(packFile);
+        const pack = JSON.parse(fs.readFileSync(packFile, { encoding: 'utf8' }));
         try {
             pack.dependencies = Object.assign({}, pack.dependencies, dependencies);
             fs.writeFileSync(packFile, JSON.stringify(pack, undefined, '  '));
@@ -46,7 +46,7 @@ export function rebuild(target: 'electron' | 'browser', modules: string[] | unde
             require(`electron-rebuild/${electronRebuildPackageJson['bin']['electron-rebuild']}`);
         } finally {
             setTimeout(() => {
-                fs.writeFile(packFile, packageText);
+                fs.promises.writeFile(packFile, packageText);
             }, 100);
         }
     } else if (target === 'browser' && fs.existsSync(browserModulesPath)) {
@@ -54,10 +54,10 @@ export function rebuild(target: 'electron' | 'browser', modules: string[] | unde
             console.log('Reverting ' + moduleName);
             const src = path.join(browserModulesPath, moduleName);
             const dest = path.join(nodeModulesPath, moduleName);
-            fs.removeSync(dest);
-            fs.copySync(src, dest);
+            fs.unlinkSync(dest);
+            fs.copyFileSync(src, dest);
         }
-        fs.removeSync(browserModulesPath);
+        fs.unlinkSync(browserModulesPath);
     } else {
         console.log('native node modules are already rebuilt for ' + target);
     }

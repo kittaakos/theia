@@ -15,7 +15,7 @@
  ********************************************************************************/
 
 import { PluginDeployerFileHandler, PluginDeployerEntry, PluginDeployerFileHandlerContext, PluginType } from '@theia/plugin-ext';
-import * as fs from 'fs-extra';
+import { promises as fs } from 'fs';
 import * as path from 'path';
 import * as filenamify from 'filenamify';
 import { injectable, inject } from 'inversify';
@@ -43,10 +43,20 @@ export class PluginVsCodeFileHandler implements PluginDeployerFileHandler {
         const id = context.pluginEntry().id();
         const extensionDir = await this.getExtensionDir(context);
         console.log(`[${id}]: trying to decompress into "${extensionDir}"...`);
-        if (context.pluginEntry().type === PluginType.User && await fs.pathExists(extensionDir)) {
-            console.log(`[${id}]: already found`);
-            context.pluginEntry().updatePath(extensionDir);
-            return;
+        if (context.pluginEntry().type === PluginType.User) {
+            try {
+                await fs.access(extensionDir);
+                console.log(`[${id}]: already found`);
+                context.pluginEntry().updatePath(extensionDir);
+                return;
+            } catch (e) {
+                if ('code' in e && e.code === 'ENOENT') {
+                    // ignore.
+                } else {
+                    throw e;
+                }
+            }
+
         }
         await this.decompress(extensionDir, context);
         console.log(`[${id}]: decompressed`);
@@ -66,8 +76,15 @@ export class PluginVsCodeFileHandler implements PluginDeployerFileHandler {
         if (context.pluginEntry().path().endsWith('.tgz')) {
             const extensionPath = path.join(extensionDir, 'package');
             const vscodeNodeModulesPath = path.join(extensionPath, 'vscode_node_modules.zip');
-            if (await fs.pathExists(vscodeNodeModulesPath)) {
+            try {
+                await fs.access(vscodeNodeModulesPath);
                 await context.unzip(vscodeNodeModulesPath, path.join(extensionPath, 'node_modules'));
+            } catch (e) {
+                if ('code' in e && e.code === 'ENOENT') {
+                    // ignore
+                } else {
+                    throw e;
+                }
             }
         }
     }
