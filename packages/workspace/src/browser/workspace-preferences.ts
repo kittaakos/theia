@@ -14,7 +14,7 @@
  * SPDX-License-Identifier: EPL-2.0 OR GPL-2.0 WITH Classpath-exception-2.0
  ********************************************************************************/
 
-import { interfaces } from 'inversify';
+import { injectable, interfaces } from 'inversify';
 import {
     createPreferenceProxy,
     PreferenceProxy,
@@ -39,6 +39,13 @@ export const workspacePreferenceSchema: PreferenceSchema = {
     }
 };
 
+@injectable()
+export class WorkspacePreferencesSchemaProvider {
+    get schema(): PreferenceSchema {
+        return workspacePreferenceSchema;
+    }
+}
+
 export interface WorkspaceConfiguration {
     'workspace.preserveWindow': boolean,
     'workspace.supportMultiRootWorkspace': boolean
@@ -57,5 +64,6 @@ export function bindWorkspacePreferences(bind: interfaces.Bind): void {
         return createWorkspacePreferences(preferences);
     }).inSingletonScope();
 
-    bind(PreferenceContribution).toConstantValue({ schema: workspacePreferenceSchema });
+    bind(WorkspacePreferencesSchemaProvider).toSelf().inSingletonScope();
+    bind(PreferenceContribution).toService(WorkspacePreferencesSchemaProvider);
 }
