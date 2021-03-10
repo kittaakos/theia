@@ -20,8 +20,6 @@ import { ProblemMatcher, ProblemMatch, WatchingPattern } from './problem-matcher
 
 export const taskPath = '/services/task';
 
-export const TaskServer = Symbol('TaskServer');
-export const TaskClient = Symbol('TaskClient');
 export enum DependsOrder {
     Sequence = 'sequence',
     Parallel = 'parallel',
@@ -191,6 +189,7 @@ export interface TaskInfo {
     readonly [key: string]: any;
 }
 
+export const TaskServer = Symbol('TaskServer');
 export interface TaskServer extends JsonRpcServer<TaskClient> {
     /** Run a task. Optionally pass a context.  */
     run(task: TaskConfiguration, ctx?: string, option?: RunTaskOption): Promise<TaskInfo>;
@@ -207,8 +206,12 @@ export interface TaskServer extends JsonRpcServer<TaskClient> {
     disconnectClient(client: TaskClient): void;
 
     /** Returns the list of default and registered task runners */
-    getRegisteredTaskTypes(): Promise<string[]>
+    getRegisteredTaskTypes(): Promise<string[]>;
 
+    /**
+     * Marks the `task` as completed with `result`.
+     */
+    customExecutionComplete(task: TaskInfo, result: number): Promise<void>;
 }
 
 export interface TaskCustomizationData {
@@ -255,6 +258,7 @@ export interface BackgroundTaskEndedEvent {
     readonly ctx?: string;
 }
 
+export const TaskClient = Symbol('TaskClient');
 export interface TaskClient {
     onTaskExit(event: TaskExitedEvent): void;
     onTaskCreated(event: TaskInfo): void;

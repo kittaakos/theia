@@ -195,7 +195,7 @@ declare module '@theia/plugin' {
          */
         command?: string;
         /**
-        * Title of the command invocation, like "Add local varible 'foo'".
+        * Title of the command invocation, like "Add local variable 'foo'".
         */
         title?: string;
         /**
@@ -478,7 +478,7 @@ declare module '@theia/plugin' {
          * Builder-function that appends a tabstop (`$1`, `$2` etc) to
          * the [`value`](#SnippetString.value) of this snippet string.
          *
-         * @param number The number of this tabstop, defaults to an auto-incremet
+         * @param number The number of this tabstop, defaults to an auto-increment
          * value starting at 1.
          * @return This snippet string.
          */
@@ -490,7 +490,7 @@ declare module '@theia/plugin' {
          *
          * @param value The value of this placeholder - either a string or a function
          * with which a nested snippet can be created.
-         * @param number The number of this tabstop, defaults to an auto-incremet
+         * @param number The number of this tabstop, defaults to an auto-increment
          * value starting at 1.
          * @return This snippet string.
          */
@@ -852,7 +852,7 @@ declare module '@theia/plugin' {
 
         /**
          * Render options applied to the current decoration. For performance reasons, keep the
-         * number of decoration specific options small, and use decoration types whereever possible.
+         * number of decoration specific options small, and use decoration types wherever possible.
          */
         renderOptions?: DecorationInstanceRenderOptions;
     }
@@ -1128,7 +1128,7 @@ declare module '@theia/plugin' {
 
         /**
          * Insert a [snippet](#SnippetString) and put the editor into snippet mode. "Snippet mode"
-         * means the editor adds placeholders and additionals cursors so that the user can complete
+         * means the editor adds placeholders and additional cursors so that the user can complete
          * or accept the snippet.
          *
          * @param snippet The snippet to insert in this edit.
@@ -1338,7 +1338,7 @@ declare module '@theia/plugin' {
          * [Uri.parse](#Uri.parse).
          *
          * @param skipEncoding Do not percentage-encode the result, defaults to `false`. Note that
-         *  the `#` and `?` characters occuring in the path will always be encoded.
+         *  the `#` and `?` characters occurring in the path will always be encoded.
          * @returns A string representation of this Uri.
          */
         toString(skipEncoding?: boolean): string;
@@ -1474,7 +1474,7 @@ declare module '@theia/plugin' {
 
         /**
          * Get a word-range at the given position. By default words are defined by
-         * common separators, like space, -, _, etc. In addition, per languge custom
+         * common separators, like space, -, _, etc. In addition, per language custom
          * [word definitions](#LanguageConfiguration.wordPattern) can be defined. It
          * is also possible to provide a custom regular expression.
          *
@@ -2830,17 +2830,84 @@ declare module '@theia/plugin' {
      */
     interface Pseudoterminal {
         /**
-         * An event that when fired will write data to the terminal.
+         * An event that when fired will write data to the terminal. Unlike
+         * [Terminal.sendText](#Terminal.sendText) which sends text to the underlying child
+         * pseudo-device (the child), this will write the text to parent pseudo-device (the
+         * _terminal_ itself).
+         *
+         * Note writing `\n` will just move the cursor down 1 row, you need to write `\r` as well
+         * to move the cursor to the left-most cell.
+         *
+         * **Example:** Write red text to the terminal
+         * ```typescript
+         * const writeEmitter = new vscode.EventEmitter<string>();
+         * const pty: vscode.Pseudoterminal = {
+         *   onDidWrite: writeEmitter.event,
+         *   open: () => writeEmitter.fire('\x1b[31mHello world\x1b[0m'),
+         *   close: () => {}
+         * };
+         * vscode.window.createTerminal({ name: 'My terminal', pty });
+         * ```
+         *
+         * **Example:** Move the cursor to the 10th row and 20th column and write an asterisk
+         * ```typescript
+         * writeEmitter.fire('\x1b[10;20H*');
+         * ```
          */
         onDidWrite: Event<string>;
 
         /**
-         * An event that when fired allows resizing the terminal.
+         * An event that when fired allows overriding the [dimensions](#Pseudoterminal.setDimensions) of the
+         * terminal. Note that when set, the overridden dimensions will only take effect when they
+         * are lower than the actual dimensions of the terminal (ie. there will never be a scroll
+         * bar). Set to `undefined` for the terminal to go back to the regular dimensions (fit to
+         * the size of the panel).
+         *
+         * **Example:** Override the dimensions of a terminal to 20 columns and 10 rows
+         * ```typescript
+         * const dimensionsEmitter = new vscode.EventEmitter<vscode.TerminalDimensions>();
+         * const pty: vscode.Pseudoterminal = {
+         *   onDidWrite: writeEmitter.event,
+         *   onDidOverrideDimensions: dimensionsEmitter.event,
+         *   open: () => {
+         *     dimensionsEmitter.fire({
+         *       columns: 20,
+         *       rows: 10
+         *     });
+         *   },
+         *   close: () => {}
+         * };
+         * vscode.window.createTerminal({ name: 'My terminal', pty });
+         * ```
          */
         onDidOverrideDimensions?: Event<TerminalDimensions | undefined>;
 
         /**
-         * An event that when fired will close the pty.
+         * An event that when fired will signal that the pty is closed and dispose of the terminal.
+         *
+         * A number can be used to provide an exit code for the terminal. Exit codes must be
+         * positive and a non-zero exit codes signals failure which shows a notification for a
+         * regular terminal and allows dependent tasks to proceed when used with the
+         * `CustomExecution` API.
+         *
+         * **Example:** Exit the terminal when "y" is pressed, otherwise show a notification.
+         * ```typescript
+         * const writeEmitter = new vscode.EventEmitter<string>();
+         * const closeEmitter = new vscode.EventEmitter<vscode.TerminalDimensions>();
+         * const pty: vscode.Pseudoterminal = {
+         *   onDidWrite: writeEmitter.event,
+         *   onDidClose: closeEmitter.event,
+         *   open: () => writeEmitter.fire('Press y to exit successfully'),
+         *   close: () => {},
+         *   handleInput: data => {
+         *     if (data !== 'y') {
+         *       vscode.window.showInformationMessage('Something went wrong');
+         *     }
+         *     closeEmitter.fire();
+         *   }
+         * };
+         * vscode.window.createTerminal({ name: 'Exit example', pty });
+         * ```
          */
         onDidClose?: Event<void | number>;
 
@@ -2857,14 +2924,37 @@ declare module '@theia/plugin' {
         close(): void;
 
         /**
-         * Implement to handle inputing data in the terminal.
+         * Implement to handle incoming keystrokes in the terminal or when an extension calls
+         * [Terminal.sendText](#Terminal.sendText). `data` contains the keystrokes/text serialized into
+         * their corresponding VT sequence representation.
          *
-         * @param data The inputing data.
+         * @param data The incoming data.
+         *
+         * **Example:** Echo input in the terminal. The sequence for enter (`\r`) is translated to
+         * CRLF to go to a new line and move the cursor to the start of the line.
+         * ```typescript
+         * const writeEmitter = new vscode.EventEmitter<string>();
+         * const pty: vscode.Pseudoterminal = {
+         *   onDidWrite: writeEmitter.event,
+         *   open: () => {},
+         *   close: () => {},
+         *   handleInput: data => writeEmitter.fire(data === '\r' ? '\r\n' : data)
+         * };
+         * vscode.window.createTerminal({ name: 'Local echo', pty });
+         * ```
          */
         handleInput?(data: string): void;
 
         /**
-         * Implement to handle when the number of rows and columns changes.
+         * Implement to handle when the number of rows and columns that fit into the terminal panel
+         * changes, for example when font size changes or when the panel is resized. The initial
+         * state of a terminal's dimensions should be treated as `undefined` until this is triggered
+         * as the size of a terminal isn't known until it shows up in the user interface.
+         *
+         * When dimensions are overridden by
+         * [onDidOverrideDimensions](#Pseudoterminal.onDidOverrideDimensions), `setDimensions` will
+         * continue to be called with the regular panel dimensions, allowing the extension continue
+         * to react dimension changes.
          *
          * @param dimensions The new dimensions.
          */
@@ -3458,7 +3548,7 @@ declare module '@theia/plugin' {
      */
     interface WebviewPanelSerializer<T = unknown> {
         /**
-         * Restore a webview panel from its seriailzed `state`.
+         * Restore a webview panel from its serialized `state`.
          *
          * Called when a serialized webview first becomes visible.
          *
@@ -4956,7 +5046,7 @@ declare module '@theia/plugin' {
          * The *effective* value (returned by [`get`](#WorkspaceConfiguration.get))
          * is computed like this: `defaultValue` overwritten by `globalValue`,
          * `globalValue` overwritten by `workspaceValue`. `workspaceValue` overwritten by `workspaceFolderValue`.
-         * Refer to [Settings Inheritence](https://code.visualstudio.com/docs/getstarted/settings)
+         * Refer to [Settings Inheritance](https://code.visualstudio.com/docs/getstarted/settings)
          * for more information.
          *
          * *Note:* The configuration name must denote a leaf in the configuration tree
@@ -4981,7 +5071,7 @@ declare module '@theia/plugin' {
          * has no observable effect in that workspace, but in others. Setting a workspace value
          * in the presence of a more specific folder value has no observable effect for the resources
          * under respective [folder](#workspace.workspaceFolders), but in others. Refer to
-         * [Settings Inheritence](https://code.visualstudio.com/docs/getstarted/settings) for more information.
+         * [Settings Inheritance](https://code.visualstudio.com/docs/getstarted/settings) for more information.
          *
          * *Note 2:* To remove a configuration value use `undefined`, like so: `config.update('somekey', undefined)`
          *
@@ -5599,7 +5689,7 @@ declare module '@theia/plugin' {
          * files change on disk, e.g triggered by another application, or when using the
          * [`workspace.fs`](#FileSystem)-api.
          *
-         * *Note 2:* When this event is fired, edits to files thare are being created cannot be applied.
+         * *Note 2:* When this event is fired, edits to files are are being created cannot be applied.
          */
         export const onWillCreateFiles: Event<FileWillCreateEvent>;
 
@@ -5786,7 +5876,7 @@ declare module '@theia/plugin' {
          * cause failure of the operation.
          *
          * When applying a workspace edit that consists only of text edits an 'all-or-nothing'-strategy is used.
-         * A workspace edit with resource creations or deletions aborts the operation, e.g. consective edits will
+         * A workspace edit with resource creations or deletions aborts the operation, e.g. consecutive edits will
          * not be attempted, when a single edit fails.
          *
          * @param edit A workspace edit.
@@ -5976,10 +6066,10 @@ declare module '@theia/plugin' {
          *
          * If the extension is running remotely, this function automatically establishes a port forwarding tunnel
          * from the local machine to `target` on the remote and returns a local uri to the tunnel. The lifetime of
-         * the port fowarding tunnel is managed by VS Code and the tunnel can be closed by the user.
+         * the port forwarding tunnel is managed by VS Code and the tunnel can be closed by the user.
          *
          * Extensions should not cache the result of `asExternalUri` as the resolved uri may become invalid due to
-         * a system or user action — for example, in remote cases, a user may close a port forwardng tunnel
+         * a system or user action — for example, in remote cases, a user may close a port forwarding tunnel
          * that was opened by `asExternalUri`.
          *
          * *Note* that uris passed through `openExternal` are automatically resolved and you should not call `asExternalUri`
@@ -9632,6 +9722,22 @@ declare module '@theia/plugin' {
         args?: (string | ShellQuotedString)[];
     }
 
+    /**
+     * Class used to execute an extension callback as a task.
+     */
+    export class CustomExecution {
+        /**
+         * Constructs a CustomExecution task object. The callback will be executed when the task is run, at which point the
+         * extension should return the Pseudoterminal it will "run in". The task should wait to do further execution until
+         * [Pseudoterminal.open](#Pseudoterminal.open) is called. Task cancellation should be handled using
+         * [Pseudoterminal.close](#Pseudoterminal.close). When the task is complete fire
+         * [Pseudoterminal.onDidClose](#Pseudoterminal.onDidClose).
+         * @param callback The callback that will be called when the task is started by a user. Any ${} style variables that
+         * were in the task definition will be resolved and passed into the callback as `resolvedDefinition`.
+         */
+        constructor(callback: (resolvedDefinition: TaskDefinition) => Thenable<Pseudoterminal>);
+    }
+
     export interface ProcessExecutionOptions {
         /**
          * The current working directory of the executed program or shell.
@@ -9802,8 +9908,8 @@ declare module '@theia/plugin' {
             taskDefinition: TaskDefinition,
             scope: WorkspaceFolder | TaskScope.Global | TaskScope.Workspace,
             name: string,
-            source?: string,
-            execution?: ProcessExecution | ShellExecution,
+            source: string,
+            execution?: ProcessExecution | ShellExecution | CustomExecution,
             problemMatchers?: string | string[]);
 
         /**
@@ -9836,7 +9942,7 @@ declare module '@theia/plugin' {
         scope?: TaskScope.Global | TaskScope.Workspace | WorkspaceFolder;
 
         /** The task's execution engine */
-        execution?: ProcessExecution | ShellExecution;
+        execution?: ProcessExecution | ShellExecution | CustomExecution;
 
         /** Whether the task is a background task or not. */
         isBackground?: boolean;
@@ -10002,6 +10108,10 @@ declare module '@theia/plugin' {
          * Executes a task that is managed by VS Code. The returned
          * task execution can be used to terminate the task.
          *
+         * @throws When running a ShellExecution or a ProcessExecution
+         * task in an environment where a new process cannot be started.
+         * In such an environment, only CustomExecution tasks can be run.
+         * 
          * @param task the task to execute
          */
         export function executeTask(task: Task): PromiseLike<TaskExecution>;
@@ -10527,7 +10637,7 @@ declare module '@theia/plugin' {
     }
 
     /**
-     * The call hierarchy provider interface describes the constract between extensions
+     * The call hierarchy provider interface describes the construct between extensions
      * and the call hierarchy feature which allows to browse calls and caller of function,
      * methods, constructor etc.
      */

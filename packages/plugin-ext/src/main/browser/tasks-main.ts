@@ -53,7 +53,7 @@ export class TasksMainImpl implements TasksMain, Disposable {
             this.proxy.$onDidStartTask({
                 id: event.taskId,
                 task: this.fromTaskConfiguration(event.config)
-            });
+            }, event.terminalId!);
         }));
 
         this.toDispose.push(this.taskWatcher.onTaskExit((event: TaskExitedEvent) => {
@@ -78,6 +78,11 @@ export class TasksMainImpl implements TasksMain, Disposable {
 
     dispose(): void {
         this.toDispose.dispose();
+    }
+
+    async $createTaskId(task: TaskDto): Promise<string> {
+        console.log('$createTaskId', JSON.stringify(task));
+        return 'foo-bar';
     }
 
     $registerTaskProvider(handle: number, type: string): void {
@@ -152,6 +157,15 @@ export class TasksMainImpl implements TasksMain, Disposable {
 
     $terminateTask(id: number): void {
         this.taskService.kill(id);
+    }
+
+    async $customExecutionComplete(id: string, result?: number): Promise<void> {
+        const tasks = await this.taskService.getRunningTasks();
+        const task = tasks.find(({ taskId }) => String(taskId) === id);
+        if (!task) {
+            throw new Error('Task to mark as complete not found');
+        }
+        await this.taskService.extensionCallbackTaskComplete(task, result);
     }
 
     protected createTaskProvider(handle: number): TaskProvider {

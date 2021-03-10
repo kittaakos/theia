@@ -1522,7 +1522,7 @@ export class ProcessExecution {
         return computeTaskExecutionId(props);
     }
 
-    public static is(value: theia.ShellExecution | theia.ProcessExecution): boolean {
+    public static is(value: theia.ShellExecution | theia.ProcessExecution | theia.CustomExecution): boolean {
         const candidate = value as ProcessExecution;
         return candidate && !!candidate.process;
     }
@@ -1630,9 +1630,28 @@ export class ShellExecution {
         return computeTaskExecutionId(props);
     }
 
-    public static is(value: theia.ShellExecution | theia.ProcessExecution): boolean {
+    public static is(value: theia.ShellExecution | theia.ProcessExecution | theia.CustomExecution): boolean {
         const candidate = value as ShellExecution;
         return candidate && (!!candidate.commandLine || !!candidate.command);
+    }
+}
+
+export class CustomExecution implements theia.CustomExecution {
+
+    private _id?: string;
+    constructor(public callback: (resolvedDefinition: theia.TaskDefinition) => Thenable<theia.Pseudoterminal>) { }
+
+    computeId(): string {
+        if (!this._id) {
+            this._id = UUID.uuid4();
+        }
+        return `customExecution${this._id}`;
+    }
+
+}
+export namespace CustomExecution {
+    export function is(execution: theia.ShellExecution | theia.ProcessExecution | theia.CustomExecution): execution is theia.CustomExecution {
+        return execution instanceof theia.CustomExecution;
     }
 }
 

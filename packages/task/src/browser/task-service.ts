@@ -176,7 +176,7 @@ export class TaskService implements TaskConfigurationClient {
     protected readonly labelProvider: LabelProvider;
 
     @inject(MonacoWorkspace)
-    protected monacoWorkspace: MonacoWorkspace;
+    protected readonly monacoWorkspace: MonacoWorkspace;
 
     @inject(TaskTerminalWidgetManager)
     protected readonly taskTerminalWidgetManager: TaskTerminalWidgetManager;
@@ -1022,11 +1022,11 @@ export class TaskService implements TaskConfigurationClient {
 
         const registeredProblemMatchers = this.problemMatcherRegistry.getAll();
         items.push(...registeredProblemMatchers.map(matcher =>
-            ({
-                label: matcher.label,
-                value: { problemMatchers: [matcher] },
-                description: matcher.name.startsWith('$') ? matcher.name : `$${matcher.name}`
-            })
+        ({
+            label: matcher.label,
+            value: { problemMatchers: [matcher] },
+            description: matcher.name.startsWith('$') ? matcher.name : `$${matcher.name}`
+        })
         ));
         return items;
     }
@@ -1150,4 +1150,9 @@ export class TaskService implements TaskConfigurationClient {
         const completedTask = this.runningTasks.get(id);
         return completedTask && completedTask.terminateSignal.promise;
     }
+
+    async extensionCallbackTaskComplete(task: TaskInfo, result: number | undefined): Promise<void> {
+        console.log('extensionCallbackTaskComplete', JSON.stringify(task), 'result', result);
+    }
+
 }

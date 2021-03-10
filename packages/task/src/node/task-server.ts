@@ -254,4 +254,8 @@ export class TaskServerImpl implements TaskServer, Disposable {
             this.problemCollectors.get(ctx)!.delete(taskId);
         }
     }
+
+    async customExecutionComplete(task: TaskInfo, result: number): Promise<void> {
+    }
+
 }

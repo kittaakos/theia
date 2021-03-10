@@ -700,7 +700,7 @@ export function toWorkspaceFolder(folder: model.WorkspaceFolder): theia.Workspac
     };
 }
 
-export function fromTask(task: theia.Task): TaskDto | undefined {
+export function fromTask(task: theia.Task | undefined): TaskDto | undefined {
     if (!task) {
         return undefined;
     }
@@ -751,6 +751,10 @@ export function fromTask(task: theia.Task): TaskDto | undefined {
 
     if (taskDefinition.type === 'process' || types.ProcessExecution.is(execution)) {
         return fromProcessExecution(<theia.ProcessExecution>execution, taskDto);
+    }
+
+    if (taskDefinition.type === 'customExecution' || execution instanceof theia.CustomExecution) {
+        return fromCustomExecution(<theia.CustomExecution>execution, taskDto);
     }
 
     return taskDto;
@@ -847,6 +851,10 @@ export function fromShellExecution(execution: theia.ShellExecution, taskDto: Tas
     } else {
         throw new Error('Converting ShellQuotedString command is not implemented');
     }
+}
+
+export function fromCustomExecution(execution: theia.CustomExecution, taskDto: TaskDto): TaskDto {
+    return taskDto;
 }
 
 export function getProcessExecution(taskDto: TaskDto): theia.ProcessExecution {

@@ -1664,19 +1664,21 @@ export const MAIN_RPC_CONTEXT = {
 export interface TasksExt {
     $provideTasks(handle: number, token?: CancellationToken): Promise<TaskDto[] | undefined>;
     $resolveTask(handle: number, task: TaskDto, token?: CancellationToken): Promise<TaskDto | undefined>;
-    $onDidStartTask(execution: TaskExecutionDto): void;
+    $onDidStartTask(execution: TaskExecutionDto, terminalId: number): void;
     $onDidEndTask(id: number): void;
     $onDidStartTaskProcess(processId: number | undefined, execution: TaskExecutionDto): void;
     $onDidEndTaskProcess(exitCode: number | undefined, taskId: number): void;
 }
 
 export interface TasksMain {
+    $createTaskId(task: TaskDto): Promise<string>;
     $registerTaskProvider(handle: number, type: string): void;
     $fetchTasks(taskVersion: string | undefined, taskType: string | undefined): Promise<TaskDto[]>;
     $executeTask(taskDto: TaskDto): Promise<TaskExecutionDto | undefined>;
     $taskExecutions(): Promise<TaskExecutionDto[]>;
     $unregister(handle: number): void;
     $terminateTask(id: number): void;
+    $customExecutionComplete(id: string, result?: number): Promise<void>;
 }
 
 export interface AuthenticationExt {
