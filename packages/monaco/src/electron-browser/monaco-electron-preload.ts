@@ -15,10 +15,7 @@
  ********************************************************************************/
 
 import * as path from 'path';
-import { ContainerModule } from '@theia/core/shared/inversify';
 import { loadVsRequire, loadMonaco } from '../browser/monaco-loader';
-
-export { ContainerModule };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const s = <any>self;
@@ -36,16 +33,14 @@ const uriFromPath = (filePath: string) => {
     return encodeURI('file://' + pathName);
 };
 
-export default loadVsRequire(global)
-    .then(vsRequire => {
-        const baseUrl = uriFromPath(__dirname);
-        vsRequire.config({ baseUrl });
-
-        // workaround monaco-css not understanding the environment
-        s.module = undefined;
-        // workaround monaco-typescript not understanding the environment
-        s.process.browser = true;
-        return loadMonaco(vsRequire);
-    })
-    .then(() => import('../browser/monaco-frontend-module'))
-    .then(module => module.default);
+export default new Promise<void>(async resolve => {
+    const require = await loadVsRequire(global);
+    const baseUrl = uriFromPath(__dirname);
+    require.config({ baseUrl });
+    // workaround monaco-css not understanding the environment
+    s.module = undefined;
+    // workaround monaco-typescript not understanding the environment
+    s.process.browser = true;
+    await loadMonaco(require);
+    resolve();
+});
