@@ -23,8 +23,9 @@ export class FrontendGenerator extends AbstractGenerator {
 
     async generate(): Promise<void> {
         const frontendModules = this.pck.targetFrontendModules;
+        const frontendPreloads = this.pck.targetPreloads;
         await this.write(this.pck.frontend('index.html'), this.compileIndexHtml(frontendModules));
-        await this.write(this.pck.frontend('index.js'), this.compileIndexJs(frontendModules));
+        await this.write(this.pck.frontend('index.js'), this.compileIndexJs(frontendModules, frontendPreloads));
         if (this.pck.isElectron()) {
             const electronMainModules = this.pck.targetElectronMainModules;
             await this.write(this.pck.frontend('electron-main.js'), this.compileElectronMain(electronMainModules));
@@ -67,33 +68,48 @@ export class FrontendGenerator extends AbstractGenerator {
   <meta name="apple-mobile-web-app-capable" content="yes">`;
     }
 
-    protected compileIndexJs(frontendModules: Map<string, string>): string {
+    protected compileIndexJs(frontendModules: Map<string, string>, frontedPreloads: Map<string, string>): string {
         return `// @ts-check
+
+/* eslint-disable import/no-extraneous-dependencies */
+${this.ifBrowser('// @ts-ignore')}
 ${this.ifBrowser("require('es6-promise/auto');")}
 require('reflect-metadata');
 const { Container } = require('inversify');
+/* eslint-enable import/no-extraneous-dependencies */
 const { FrontendApplicationConfigProvider } = require('@theia/core/lib/browser/frontend-application-config-provider');
+/* eslint-disable @typescript-eslint/quotes */
 FrontendApplicationConfigProvider.set(${this.prettyStringify(this.pck.props.frontend.config)});
+/* eslint-enable @typescript-eslint/quotes */
 const { FrontendApplication } = require('@theia/core/lib/browser');
 const { frontendApplicationModule } = require('@theia/core/lib/browser/frontend-application-module');
 const { messagingFrontendModule } = require('@theia/core/lib/${this.pck.isBrowser()
                 ? 'browser/messaging/messaging-frontend-module'
                 : 'electron-browser/messaging/electron-messaging-frontend-module'}');
 const { loggerFrontendModule } = require('@theia/core/lib/browser/logger-frontend-module');
+const { nlsFrontendModule } = require('@theia/core/lib/browser/nls-frontend-module');
 const { ThemeService } = require('@theia/core/lib/browser/theming');
 
 const container = new Container();
-container.load(frontendApplicationModule);
-container.load(messagingFrontendModule);
-container.load(loggerFrontendModule);
 
+/**
+ * @param {{ default: any; }} raw
+ */
 function load(raw) {
     return Promise.resolve(raw.default).then(module =>
         container.load(module)
-    )
+    );
+}
+
+/**
+ * @param {{ default: any; }} raw
+ */
+function preload(raw) {
+    return new Promise(resolve => Promise.resolve(raw.default).then(resolve));
 }
 
 function start() {
+    // @ts-ignore
     (window['theia'] = window['theia'] || {}).container = container;
 
     const themeService = ThemeService.get();
@@ -103,13 +119,20 @@ function start() {
     return application.start();
 }
 
-module.exports = Promise.resolve()${this.compileFrontendModuleImports(frontendModules)}
+module.exports = Promise.resolve()${this.compileFrontendPreloadImports(frontedPreloads)}
+    .then(function () {
+        container.load(frontendApplicationModule);
+        container.load(messagingFrontendModule);
+        container.load(loggerFrontendModule);
+        container.load(nlsFrontendModule);
+    })${this.compileFrontendModuleImports(frontendModules)}
     .then(start).catch(reason => {
         console.error('Failed to start the frontend application.');
         if (reason) {
             console.error(reason);
         }
-    });`;
+    });
+`;
     }
 
     protected compileElectronMain(electronMainModules?: Map<string, string>): string {
@@ -176,6 +199,7 @@ module.exports = Promise.resolve()${this.compileElectronMainModuleImports(electr
             console.error(reason);
         }
     });
+
 `;
     }
 

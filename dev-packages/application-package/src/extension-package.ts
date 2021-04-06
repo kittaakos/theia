@@ -22,6 +22,8 @@ import { NpmRegistry, PublishedNodePackage, NodePackage } from './npm-registry';
 export interface Extension {
     frontend?: string;
     frontendElectron?: string;
+    frontendPreload?: string;
+    frontendElectronPreload?: string;
     backend?: string;
     backendElectron?: string;
     electronMain?: string;

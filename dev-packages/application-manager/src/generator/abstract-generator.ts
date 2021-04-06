@@ -50,7 +50,20 @@ export abstract class AbstractGenerator {
         return modules && this.compileModuleImports(modules, 'require') || '';
     }
 
-    protected compileModuleImports(modules: Map<string, string>, fn: 'import' | 'require'): string {
+    protected compileFrontendPreloadImports(modules: Map<string, string>): string {
+        return this.compileModuleImports(
+            modules,
+            splitFrontend ? 'import' : 'require',
+            statement => `    .then(function () { return ${statement}.then(preload); })`
+        );
+    }
+
+    protected compileModuleImports(
+        modules: Map<string, string>,
+        fn: 'import' | 'require',
+        generatorCallback: (value: string, index: number, array: string[]) => string = statement => `    .then(function () { return ${statement}.then(load); })`
+    ): string {
+
         if (modules.size === 0) {
             return '';
         }
@@ -60,7 +73,7 @@ export abstract class AbstractGenerator {
                 return `Promise.resolve(${invocation})`;
             }
             return invocation;
-        }).map(statement => `    .then(function () { return ${statement}.then(load) })`);
+        }).map(generatorCallback);
         return os.EOL + lines.join(os.EOL);
     }
 
