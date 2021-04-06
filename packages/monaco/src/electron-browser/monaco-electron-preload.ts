@@ -16,6 +16,7 @@
 
 import * as path from 'path';
 import { loadVsRequire, loadMonaco } from '../browser/monaco-loader';
+import { useMonacoNls } from '../browser/monaco-nls';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const s = <any>self;
@@ -42,5 +43,6 @@ export default new Promise<void>(async resolve => {
     // workaround monaco-typescript not understanding the environment
     s.process.browser = true;
     await loadMonaco(require);
+    await useMonacoNls();
     resolve();
 });

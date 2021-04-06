@@ -81,14 +81,14 @@ const { FrontendApplicationConfigProvider } = require('@theia/core/lib/browser/f
 /* eslint-disable @typescript-eslint/quotes */
 FrontendApplicationConfigProvider.set(${this.prettyStringify(this.pck.props.frontend.config)});
 /* eslint-enable @typescript-eslint/quotes */
-const { FrontendApplication } = require('@theia/core/lib/browser');
+const { FrontendApplication } = require('@theia/core/lib/browser/frontend-application');
+const { ThemeService } = require('@theia/core/lib/browser/theming');
+const nlsPreload = require('@theia/core/lib/browser/nls-preload').default;
 const { frontendApplicationModule } = require('@theia/core/lib/browser/frontend-application-module');
 const { messagingFrontendModule } = require('@theia/core/lib/${this.pck.isBrowser()
                 ? 'browser/messaging/messaging-frontend-module'
                 : 'electron-browser/messaging/electron-messaging-frontend-module'}');
 const { loggerFrontendModule } = require('@theia/core/lib/browser/logger-frontend-module');
-const { nlsFrontendModule } = require('@theia/core/lib/browser/nls-frontend-module');
-const { ThemeService } = require('@theia/core/lib/browser/theming');
 
 const container = new Container();
 
@@ -119,12 +119,11 @@ function start() {
     return application.start();
 }
 
-module.exports = Promise.resolve()${this.compileFrontendPreloadImports(frontedPreloads)}
+module.exports = nlsPreload${this.compileFrontendPreloadImports(frontedPreloads)}
     .then(function () {
         container.load(frontendApplicationModule);
         container.load(messagingFrontendModule);
         container.load(loggerFrontendModule);
-        container.load(nlsFrontendModule);
     })${this.compileFrontendModuleImports(frontendModules)}
     .then(start).catch(reason => {
         console.error('Failed to start the frontend application.');

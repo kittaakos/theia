@@ -1,5 +1,5 @@
 /********************************************************************************
- * Copyright (C) 2017 TypeFox and others.
+ * Copyright (C) 2021 TypeFox and others.
  *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v. 2.0 which is available at
@@ -14,12 +14,16 @@
  * SPDX-License-Identifier: EPL-2.0 OR GPL-2.0 WITH Classpath-exception-2.0
  ********************************************************************************/
 
-import { loadMonaco, loadVsRequire } from './monaco-loader';
-import { useMonacoNls } from './monaco-nls';
+import { config } from 'vscode-nls/browser';
+import { nls } from '../common/nls';
 
-export default new Promise<void>(async resolve => {
-    const require = await loadVsRequire(window);
-    await loadMonaco(require);
-    await useMonacoNls();
+export default new Promise<void>(resolve => {
+    const locale = new URL(window.location.href).searchParams.get('locale') || navigator.language || navigator.languages[0];
+    if (!locale) {
+        console.warn('Could not determine locale. Falling back to default.');
+    } else {
+        console.info(`Using '${locale}' locale.`);
+    }
+    nls.localize = config({ locale })();
     resolve();
 });

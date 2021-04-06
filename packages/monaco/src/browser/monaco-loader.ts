@@ -82,7 +82,8 @@ export function loadMonaco(vsRequire: any): Promise<void> {
                 'vs/base/common/path',
                 'vs/editor/common/model/textModel',
                 'vs/base/common/strings',
-                'vs/base/common/async'
+                'vs/base/common/async',
+                'vs/nls'
             ], (commands: any, actions: any,
                 keybindingsRegistry: any, keybindingResolver: any, resolvedKeybinding: any, keybindingLabels: any,
                 keyCodes: any, mime: any, editorExtensions: any, simpleServices: any,
@@ -97,7 +98,7 @@ export function loadMonaco(vsRequire: any): Promise<void> {
                 contextKey: any, contextKeyService: any,
                 wordHelper: any,
                 error: any, path: any,
-                textModel: any, strings: any, async: any) => {
+                textModel: any, strings: any, async: any, nls: any) => {
                 const global: any = self;
                 global.monaco.commands = commands;
                 global.monaco.actions = actions;
@@ -124,6 +125,7 @@ export function loadMonaco(vsRequire: any): Promise<void> {
                 global.monaco.textModel = textModel;
                 global.monaco.strings = strings;
                 global.monaco.async = async;
+                global.monaco.nls = nls;
                 resolve();
             });
         });

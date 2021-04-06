@@ -53,6 +53,7 @@ import { UTF8 } from '../common/encodings';
 import { EnvVariablesServer } from '../common/env-variables';
 import { AuthenticationService } from './authentication-service';
 import { FormatType } from './saveable';
+import { nls } from '../common/nls';
 
 export namespace CommonMenus {
 
@@ -97,7 +98,7 @@ export namespace CommonCommands {
 
     export const CUT: Command = {
         id: 'core.cut',
-        label: 'Cut'
+        label: nls.localize('cutKey', 'Cut')
     };
     export const COPY: Command = {
         id: 'core.copy',

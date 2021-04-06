@@ -1557,6 +1557,32 @@ declare module monaco.async {
     }
 }
 
+// https://github.com/theia-ide/vscode/blob/standalone/0.19.x/src/vs/nls.d.ts
+declare module monaco.nls {
+
+    export interface ILocalizeInfo {
+        key: string;
+        comment: string[];
+    }
+
+    /**
+     * Localize a message.
+     *
+     * `message` can contain `{n}` notation where it is replaced by the nth value in `...args`
+     * For example, `localize({ key: 'sayHello', comment: ['Welcomes user'] }, 'hello {0}', name)`
+     */
+    export declare function localize(info: ILocalizeInfo, message: string, ...args: (string | number | boolean | undefined | null)[]): string;
+
+    /**
+     * Localize a message.
+     *
+     * `message` can contain `{n}` notation where it is replaced by the nth value in `...args`
+     * For example, `localize('sayHello', 'hello {0}', name)`
+     */
+    export declare function localize(key: string, message: string, ...args: (string | number | boolean | undefined | null)[]): string;
+
+}
+
 /**
  * overloading languages register functions to accept LanguageSelector,
  * check that all register functions passing a selector to registries:
