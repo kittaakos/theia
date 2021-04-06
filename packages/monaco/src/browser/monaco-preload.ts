@@ -14,15 +14,10 @@
  * SPDX-License-Identifier: EPL-2.0 OR GPL-2.0 WITH Classpath-exception-2.0
  ********************************************************************************/
 
-import { ContainerModule } from '@theia/core/shared/inversify';
 import { loadMonaco, loadVsRequire } from './monaco-loader';
 
-export { ContainerModule };
-
-export default loadVsRequire(window)
-    .then(vsRequire => loadMonaco(vsRequire))
-    .then(() =>
-        import('./monaco-frontend-module')
-    ).then(module =>
-        module.default
-    );
+export default new Promise<void>(async resolve => {
+    const require = await loadVsRequire(window);
+    await loadMonaco(require);
+    resolve();
+});

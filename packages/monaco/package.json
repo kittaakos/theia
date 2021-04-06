@@ -22,8 +22,9 @@
   },
   "theiaExtensions": [
     {
-      "frontend": "lib/browser/monaco-browser-module",
-      "frontendElectron": "lib/electron-browser/monaco-electron-module"
+      "frontendPreload": "lib/browser/monaco-preload",
+      "frontendElectronPreload": "lib/electron-browser/monaco-electron-preload",
+      "frontend": "lib/browser/monaco-frontend-module"
     }
   ],
   "keywords": [
