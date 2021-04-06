@@ -101,6 +101,8 @@ export class ApplicationPackage {
 
     protected _frontendModules: Map<string, string> | undefined;
     protected _frontendElectronModules: Map<string, string> | undefined;
+    protected _frontendPreloads: Map<string, string> | undefined;
+    protected _frontendElectronPreloads: Map<string, string> | undefined;
     protected _backendModules: Map<string, string> | undefined;
     protected _backendElectronModules: Map<string, string> | undefined;
     protected _electronMainModules: Map<string, string> | undefined;
@@ -149,6 +151,20 @@ export class ApplicationPackage {
             this._frontendElectronModules = this.computeModules('frontendElectron', 'frontend');
         }
         return this._frontendElectronModules;
+    }
+
+    get frontendPreloads(): Map<string, string> {
+        if (!this._frontendPreloads) {
+            this._frontendPreloads = this.computeModules('frontendPreload');
+        }
+        return this._frontendPreloads;
+    }
+
+    get frontendElectronPreloads(): Map<string, string> {
+        if (!this._frontendElectronPreloads) {
+            this._frontendElectronPreloads = this.computeModules('frontendElectronPreload', 'frontendPreload');
+        }
+        return this._frontendElectronPreloads;
     }
 
     get backendModules(): Map<string, string> {
@@ -245,6 +261,10 @@ export class ApplicationPackage {
 
     get targetFrontendModules(): Map<string, string> {
         return this.ifBrowser(this.frontendModules, this.frontendElectronModules);
+    }
+
+    get targetPreloads(): Map<string, string> {
+        return this.ifBrowser(this.frontendPreloads, this.frontendElectronPreloads);
     }
 
     get targetElectronMainModules(): Map<string, string> {
