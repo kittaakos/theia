@@ -81,15 +81,8 @@ const { FrontendApplicationConfigProvider } = require('@theia/core/lib/browser/f
 /* eslint-disable @typescript-eslint/quotes */
 FrontendApplicationConfigProvider.set(${this.prettyStringify(this.pck.props.frontend.config)});
 /* eslint-enable @typescript-eslint/quotes */
-const { FrontendApplication } = require('@theia/core/lib/browser/frontend-application');
-const { ThemeService } = require('@theia/core/lib/browser/theming');
-const nlsPreload = require('@theia/core/lib/browser/nls-preload').default;
-const { frontendApplicationModule } = require('@theia/core/lib/browser/frontend-application-module');
-const { messagingFrontendModule } = require('@theia/core/lib/${this.pck.isBrowser()
-                ? 'browser/messaging/messaging-frontend-module'
-                : 'electron-browser/messaging/electron-messaging-frontend-module'}');
-const { loggerFrontendModule } = require('@theia/core/lib/browser/logger-frontend-module');
 
+const nlsPreload = require('@theia/core/lib/browser/nls-preload').default;
 const container = new Container();
 
 /**
@@ -112,15 +105,23 @@ function start() {
     // @ts-ignore
     (window['theia'] = window['theia'] || {}).container = container;
 
+    const { ThemeService } = require('@theia/core/lib/browser/theming');
     const themeService = ThemeService.get();
     themeService.loadUserTheme();
 
+    const { FrontendApplication } = require('@theia/core/lib/browser/frontend-application');
     const application = container.get(FrontendApplication);
     return application.start();
 }
 
 module.exports = nlsPreload${this.compileFrontendPreloadImports(frontedPreloads)}
     .then(function () {
+        const { frontendApplicationModule } = require('@theia/core/lib/browser/frontend-application-module');
+        const { messagingFrontendModule } = require('@theia/core/lib/${this.pck.isBrowser()
+                ? 'browser/messaging/messaging-frontend-module'
+                : 'electron-browser/messaging/electron-messaging-frontend-module'}');
+        const { loggerFrontendModule } = require('@theia/core/lib/browser/logger-frontend-module');
+
         container.load(frontendApplicationModule);
         container.load(messagingFrontendModule);
         container.load(loggerFrontendModule);
