@@ -98,7 +98,7 @@ export namespace CommonCommands {
 
     export const CUT: Command = {
         id: 'core.cut',
-        label: nls.localize('cutKey', 'Cut')
+        label: nls.localize('cut', 'Cut')
     };
     export const COPY: Command = {
         id: 'core.copy',

@@ -1,7 +1,8 @@
 .DS_Store
 node_modules
 build
-lib
+**/lib/
+!**/i18n/**/lib
 *.log
 .idea
 .metadata
