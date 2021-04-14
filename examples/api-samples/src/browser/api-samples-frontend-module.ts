@@ -14,7 +14,7 @@
  * SPDX-License-Identifier: EPL-2.0 OR GPL-2.0 WITH Classpath-exception-2.0
  ********************************************************************************/
 
-import { ContainerModule } from '@theia/core/shared/inversify';
+import { ContainerModule, inject, injectable } from '@theia/core/shared/inversify';
 import { bindDynamicLabelProvider } from './label/sample-dynamic-label-provider-command-contribution';
 import { bindSampleUnclosableView } from './view/sample-unclosable-view-contribution';
 import { bindSampleOutputChannelWithSeverity } from './output/sample-output-channel-with-severity';
@@ -23,6 +23,8 @@ import { bindSampleFileWatching } from './file-watching/sample-file-watching-con
 import { bindVSXCommand } from './vsx/sample-vsx-command-contribution';
 
 import '../../src/browser/style/branding.css';
+import { CommandContribution, CommandRegistry } from '@theia/core/lib/common';
+import { MessageService } from '@theia/core/lib/common';
 
 export default new ContainerModule(bind => {
     bindDynamicLabelProvider(bind);
@@ -31,4 +33,27 @@ export default new ContainerModule(bind => {
     bindSampleMenu(bind);
     bindSampleFileWatching(bind);
     bindVSXCommand(bind);
+    bind(CommandContribution).to(NotificationActionCommandContribution).inSingletonScope();
 });
+
+@injectable()
+class NotificationActionCommandContribution implements CommandContribution {
+
+    @inject(MessageService)
+    private ms: MessageService;
+
+    registerCommands(commands: CommandRegistry): void {
+        commands.registerCommand({ id: 'NotificationActionCommandContribution', label: 'NotificationActionCommandContribution' }, {
+            execute: () => {
+                for (let i = 0; i < 10; i++) {
+                    this.ms.info('some message', 'yes').then(answer => {
+                        if (answer === 'yes') {
+                            console.log('executed', answer, Date.now());
+                        }
+                    });
+                }
+            }
+        });
+    }
+
+}
