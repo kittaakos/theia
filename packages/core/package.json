@@ -148,7 +148,8 @@
   "files": [
     "lib",
     "shared",
-    "src"
+    "src",
+    "i18n"
   ],
   "scripts": {
     "prepare": "node scripts/generate-shared.js",

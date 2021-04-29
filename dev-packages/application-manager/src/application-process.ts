@@ -32,6 +32,7 @@ export class ApplicationProcess {
     ) { }
 
     spawn(command: string, args?: string[], options?: cp.SpawnOptions): cp.ChildProcess {
+        console.log('APPLICATION PROCESS - spawn: ', command, args);
         return cp.spawn(command, args || [], Object.assign({}, this.defaultOptions, options));
     }
 

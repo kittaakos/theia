@@ -20,6 +20,7 @@ import * as cp from 'child_process';
 import { ApplicationPackage, ApplicationPackageOptions } from '@theia/application-package';
 import { WebpackGenerator, FrontendGenerator, BackendGenerator } from './generator';
 import { ApplicationProcess } from './application-process';
+import { GulpGenerator } from './generator/gulp-generator';
 
 export class ApplicationPackageManager {
 
@@ -31,6 +32,7 @@ export class ApplicationPackageManager {
     protected readonly webpack: WebpackGenerator;
     protected readonly backend: BackendGenerator;
     protected readonly frontend: FrontendGenerator;
+    protected readonly gulp: GulpGenerator;
 
     constructor(options: ApplicationPackageOptions) {
         this.pck = new ApplicationPackage(options);
@@ -39,6 +41,7 @@ export class ApplicationPackageManager {
         this.webpack = new WebpackGenerator(this.pck);
         this.backend = new BackendGenerator(this.pck);
         this.frontend = new FrontendGenerator(this.pck);
+        this.gulp = new GulpGenerator(this.pck);
     }
 
     protected async remove(fsPath: string): Promise<void> {
@@ -57,6 +60,7 @@ export class ApplicationPackageManager {
         await this.webpack.generate();
         await this.backend.generate();
         await this.frontend.generate();
+        await this.gulp.generate();
     }
 
     async copy(): Promise<void> {
@@ -67,6 +71,9 @@ export class ApplicationPackageManager {
     async build(args: string[] = []): Promise<void> {
         await this.generate();
         await this.copy();
+        // if (args.indexOf('--vscode-nls') !== -1) {
+        // await this.__process.run('gulp', ['--gulpfile', this.gulp.gulpFilePath]); // TODO:
+        // }
         return this.__process.run('webpack', args);
     }
 
@@ -92,7 +99,7 @@ export class ApplicationPackageManager {
             );
         }
 
-        const { mainArgs, options } = this.adjustArgs([ appPath, ...args ]);
+        const { mainArgs, options } = this.adjustArgs([appPath, ...args]);
         const electronCli = require.resolve('electron/cli.js', { paths: [this.pck.projectPath] });
         return this.__process.fork(electronCli, mainArgs, options);
     }

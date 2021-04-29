@@ -92,7 +92,7 @@ plugins.push(new CircularDependencyPlugin({
     failOnError: false // https://github.com/nodejs/readable-stream/issues/280#issuecomment-297076462
 }));
 
-module.exports = {
+const config = {
     entry: path.resolve(__dirname, 'src-gen/frontend/index.js'),
     output: {
         filename: 'bundle.js',
@@ -207,7 +207,20 @@ module.exports = {
     stats: {
         warnings: true
     }
-};`;
+};
+
+if (true || /* TODO: remove true */ process.argv.includes('--vscode-nls')) {
+    // rewrite nls call when being asked for
+    config.module.rules.unshift({
+        loader: 'vscode-nls-dev/lib/webpack-loader',
+        options: {
+            base: __dirname
+        }
+    });
+}
+
+module.exports = config;
+`;
     }
 
     protected compileUserWebpackConfig(): string {
