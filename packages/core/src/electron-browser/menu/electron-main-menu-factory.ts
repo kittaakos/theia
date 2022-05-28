@@ -16,7 +16,6 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import * as electronRemote from '../../../electron-shared/@electron/remote';
 import { inject, injectable, postConstruct } from 'inversify';
 import {
     isOSX, ActionMenuNode, CompositeMenuNode, MAIN_MENU_BAR, MenuPath, MenuNode
@@ -26,6 +25,9 @@ import { PreferenceService, CommonCommands } from '../../browser';
 import debounce = require('lodash.debounce');
 import { MAXIMIZED_CLASS } from '../../browser/shell/theia-dock-panel';
 import { BrowserMainMenuFactory } from '../../browser/menu/browser-menu-plugin';
+import * as electron from '../../../electron-shared/electron';
+import { TheiaElectron } from '../../electron-common/menu';
+import { MenuItemClick, UpdateMenubar } from '../../electron-common/messaging/electron-messages';
 
 /**
  * Representation of possible electron menu options.
@@ -55,7 +57,7 @@ export type ElectronMenuItemRole = ('undo' | 'redo' | 'cut' | 'copy' | 'paste' |
 @injectable()
 export class ElectronMainMenuFactory extends BrowserMainMenuFactory {
 
-    protected _menu?: Electron.Menu;
+    protected _template?: TheiaElectron.MenuItemConstructorOptions[];
     protected _toggledCommands: Set<string> = new Set();
 
     @inject(PreferenceService)
@@ -68,19 +70,24 @@ export class ElectronMainMenuFactory extends BrowserMainMenuFactory {
                 if (e.preferenceName === 'window.menuBarVisibility') {
                     this.setMenuBar();
                 }
-                if (this._menu) {
-                    for (const item of this._toggledCommands) {
-                        const menuItem = this._menu.getMenuItemById(item);
-                        if (menuItem) {
-                            menuItem.checked = this.commandRegistry.isToggled(item);
-                        }
-                    }
-                    electronRemote.getCurrentWindow().setMenu(this._menu);
+                if (this._template) {
+                    // TODO request toggle updates!
+                    // for (const item of this._toggledCommands) {
+                    //     const menuItem = this._template.getMenuItemById(item);
+                    //     if (menuItem) {
+                    //         menuItem.checked = this.commandRegistry.isToggled(item);
+                    //     }
+                    // }
+                    // electronRemote.getCurrentWindow().setMenu(this._template);
                 }
             }, 10)
         );
         this.keybindingRegistry.onKeybindingsChanged(() => {
             this.setMenuBar();
+        });
+        electron.ipcRenderer.on(MenuItemClick, (_event, arg) => {
+            const { commandId, args } = arg;
+            this.execute(commandId, args);
         });
     }
 
@@ -88,45 +95,48 @@ export class ElectronMainMenuFactory extends BrowserMainMenuFactory {
         await this.preferencesService.ready;
         if (isOSX) {
             const createdMenuBar = this.createElectronMenuBar();
-            electronRemote.Menu.setApplicationMenu(createdMenuBar);
+            electron.ipcRenderer.send(UpdateMenubar, createdMenuBar);
         } else if (this.preferencesService.get('window.titleBarStyle') === 'native') {
             const createdMenuBar = this.createElectronMenuBar();
-            electronRemote.getCurrentWindow().setMenu(createdMenuBar);
+            electron.ipcRenderer.send(UpdateMenubar, createdMenuBar);
         }
     }
 
-    createElectronMenuBar(): Electron.Menu | null {
-        const preference = this.preferencesService.get<string>('window.menuBarVisibility') || 'classic';
-        const maxWidget = document.getElementsByClassName(MAXIMIZED_CLASS);
-        if (preference === 'visible' || (preference === 'classic' && maxWidget.length === 0)) {
+    createElectronMenuBar(): TheiaElectron.MenuItemConstructorOptions[] | null {
+        if (this.shouldRenderElectronMenu()) {
             const menuModel = this.menuProvider.getMenu(MAIN_MENU_BAR);
             const template = this.fillMenuTemplate([], menuModel);
             if (isOSX) {
                 template.unshift(this.createOSXMenu());
             }
-            const menu = electronRemote.Menu.buildFromTemplate(template);
-            if (!menu) {
-                throw new Error('menu is null');
-            }
-            this._menu = menu;
-            return this._menu;
+            this._template = template;
+            return this._template;
         }
-        this._menu = undefined;
+        this._template = undefined;
         // eslint-disable-next-line no-null/no-null
         return null;
+    }
+
+    protected shouldRenderElectronMenu(): boolean {
+        const preference = this.preferencesService.get<string>('window.menuBarVisibility') || 'classic';
+        const maxWidget = document.getElementsByClassName(MAXIMIZED_CLASS);
+        return preference === 'visible' || (preference === 'classic' && maxWidget.length === 0);
     }
 
     createElectronContextMenu(menuPath: MenuPath, args?: any[]): Electron.Menu {
         const menuModel = this.menuProvider.getMenu(menuPath);
         const template = this.fillMenuTemplate([], menuModel, args, { showDisabled: false });
-        return electronRemote.Menu.buildFromTemplate(template);
+        console.log(typeof template);
+        // ipcRenderer.send()
+        // return electronRemote.Menu.buildFromTemplate(template);
+        return new Electron.Menu();
     }
 
-    protected fillMenuTemplate(items: Electron.MenuItemConstructorOptions[],
+    protected fillMenuTemplate(items: TheiaElectron.MenuItemConstructorOptions[],
         menuModel: CompositeMenuNode,
         args: any[] = [],
         options?: ElectronMenuOptions
-    ): Electron.MenuItemConstructorOptions[] {
+    ): TheiaElectron.MenuItemConstructorOptions[] {
         const showDisabled = (options?.showDisabled === undefined) ? true : options?.showDisabled;
         for (const menu of menuModel.children) {
             if (menu instanceof CompositeMenuNode) {
@@ -189,7 +199,7 @@ export class ElectronMainMenuFactory extends BrowserMainMenuFactory {
 
                 const accelerator = bindings[0] && this.acceleratorFor(bindings[0]);
 
-                const menuItem: Electron.MenuItemConstructorOptions = {
+                const menuItem: TheiaElectron.MenuItemConstructorOptions = {
                     id: node.id,
                     label: node.label,
                     type: this.commandRegistry.getToggledHandler(commandId, ...args) ? 'checkbox' : 'normal',
@@ -197,14 +207,15 @@ export class ElectronMainMenuFactory extends BrowserMainMenuFactory {
                     enabled: true, // https://github.com/eclipse-theia/theia/issues/446
                     visible: true,
                     accelerator,
-                    click: () => this.execute(commandId, args)
+                    commandId,
+                    args
                 };
 
                 if (isOSX) {
                     const role = this.roleFor(node.id);
                     if (role) {
                         menuItem.role = role;
-                        delete menuItem.click;
+                        delete menuItem.commandId;
                     }
                 }
                 items.push(menuItem);
@@ -219,7 +230,7 @@ export class ElectronMainMenuFactory extends BrowserMainMenuFactory {
         return items;
     }
 
-    protected handleElectronDefault(menuNode: MenuNode, args: any[] = [], options?: ElectronMenuOptions): Electron.MenuItemConstructorOptions[] {
+    protected handleElectronDefault(menuNode: MenuNode, args: any[] = [], options?: ElectronMenuOptions): TheiaElectron.MenuItemConstructorOptions[] {
         return [];
     }
 
@@ -275,20 +286,20 @@ export class ElectronMainMenuFactory extends BrowserMainMenuFactory {
             // We need to check if we can execute it.
             if (this.commandRegistry.isEnabled(command, ...args)) {
                 await this.commandRegistry.executeCommand(command, ...args);
-                if (this._menu && this.commandRegistry.isVisible(command, ...args)) {
-                    const item = this._menu.getMenuItemById(command);
-                    if (item) {
-                        item.checked = this.commandRegistry.isToggled(command, ...args);
-                        electronRemote.getCurrentWindow().setMenu(this._menu);
-                    }
-                }
+                // if (this._template && this.commandRegistry.isVisible(command, ...args)) {
+                //     const item = this._template.getMenuItemById(command);
+                //     if (item) {
+                //         item.checked = this.commandRegistry.isToggled(command, ...args);
+                //         electronRemote.getCurrentWindow().setMenu(this._template);
+                //     }
+                // }
             }
         } catch {
             // no-op
         }
     }
 
-    protected createOSXMenu(): Electron.MenuItemConstructorOptions {
+    protected createOSXMenu(): TheiaElectron.MenuItemConstructorOptions {
         return {
             label: 'Theia',
             submenu: [
