@@ -28,11 +28,11 @@ import {
 import { ElectronMainMenuFactory } from './electron-main-menu-factory';
 import { FrontendApplicationStateService, FrontendApplicationState } from '../../browser/frontend-application-state';
 import { FrontendApplicationConfigProvider } from '../../browser/frontend-application-config-provider';
-import { RequestTitleBarStyle, Restart, TitleBarStyleAtStartup, TitleBarStyleChanged, UpdateMenubar } from '../../electron-common/messaging/electron-messages';
+import { RequestTitleBarStyle, Restart, TitleBarStyleAtStartup, TitleBarStyleChanged, SetMenu } from '../../electron-common/messaging/electron-messages';
 import { ZoomLevel } from '../window/electron-window-preferences';
 import { BrowserMenuBarContribution } from '../../browser/menu/browser-menu-plugin';
 import { WindowService } from '../../browser/window/window-service';
-import { TheiaElectron } from '../../electron-common/menu';
+import { MenuItemConstructorOptions } from '../../electron-common/menu';
 
 import '../../../src/electron-browser/menu/electron-menu-style.css';
 
@@ -196,17 +196,17 @@ export class ElectronMenuContribution extends BrowserMenuBarContribution impleme
 
     protected setMenu(
         app: FrontendApplication,
-        template: TheiaElectron.MenuItemConstructorOptions[] | null = this.factory.createElectronMenuBar(),
+        template: MenuItemConstructorOptions[] | null = this.factory.createElectronMenuBar(),
         electronWindow: () => electron.BrowserWindow = () => electronRemote.getCurrentWindow()
     ): void {
         if (isOSX) {
-            electron.ipcRenderer.send(UpdateMenubar, template);
+            electron.ipcRenderer.send(SetMenu, template);
         } else {
             this.hideTopPanel(app);
             if (this.titleBarStyle === 'custom' && !this.menuBar) {
                 this.createCustomTitleBar(app, electronWindow());
             }
-            electron.ipcRenderer.send(UpdateMenubar, template);
+            electron.ipcRenderer.send(SetMenu, template);
         }
     }
 

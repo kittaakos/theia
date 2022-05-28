@@ -16,6 +16,7 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+import * as electron from '../../../electron-shared/electron';
 import { inject, injectable, postConstruct } from 'inversify';
 import {
     isOSX, ActionMenuNode, CompositeMenuNode, MAIN_MENU_BAR, MenuPath, MenuNode
@@ -25,9 +26,8 @@ import { PreferenceService, CommonCommands } from '../../browser';
 import debounce = require('lodash.debounce');
 import { MAXIMIZED_CLASS } from '../../browser/shell/theia-dock-panel';
 import { BrowserMainMenuFactory } from '../../browser/menu/browser-menu-plugin';
-import * as electron from '../../../electron-shared/electron';
-import { TheiaElectron } from '../../electron-common/menu';
-import { MenuItemClick, UpdateMenubar } from '../../electron-common/messaging/electron-messages';
+import { MenuItemConstructorOptions } from '../../electron-common/menu';
+import { MenuItemClick, SetMenu } from '../../electron-common/messaging/electron-messages';
 
 /**
  * Representation of possible electron menu options.
@@ -57,7 +57,7 @@ export type ElectronMenuItemRole = ('undo' | 'redo' | 'cut' | 'copy' | 'paste' |
 @injectable()
 export class ElectronMainMenuFactory extends BrowserMainMenuFactory {
 
-    protected _template?: TheiaElectron.MenuItemConstructorOptions[];
+    protected _template?: MenuItemConstructorOptions[];
     protected _toggledCommands: Set<string> = new Set();
 
     @inject(PreferenceService)
@@ -95,15 +95,17 @@ export class ElectronMainMenuFactory extends BrowserMainMenuFactory {
         await this.preferencesService.ready;
         if (isOSX) {
             const createdMenuBar = this.createElectronMenuBar();
-            electron.ipcRenderer.send(UpdateMenubar, createdMenuBar);
+            electron.ipcRenderer.send(SetMenu, createdMenuBar);
         } else if (this.preferencesService.get('window.titleBarStyle') === 'native') {
             const createdMenuBar = this.createElectronMenuBar();
-            electron.ipcRenderer.send(UpdateMenubar, createdMenuBar);
+            electron.ipcRenderer.send(SetMenu, createdMenuBar);
         }
     }
 
-    createElectronMenuBar(): TheiaElectron.MenuItemConstructorOptions[] | null {
-        if (this.shouldRenderElectronMenu()) {
+    createElectronMenuBar(): MenuItemConstructorOptions[] | null {
+        const preference = this.preferencesService.get<string>('window.menuBarVisibility') || 'classic';
+        const maxWidget = document.getElementsByClassName(MAXIMIZED_CLASS);
+        if (preference === 'visible' || (preference === 'classic' && maxWidget.length === 0)) {
             const menuModel = this.menuProvider.getMenu(MAIN_MENU_BAR);
             const template = this.fillMenuTemplate([], menuModel);
             if (isOSX) {
@@ -117,12 +119,6 @@ export class ElectronMainMenuFactory extends BrowserMainMenuFactory {
         return null;
     }
 
-    protected shouldRenderElectronMenu(): boolean {
-        const preference = this.preferencesService.get<string>('window.menuBarVisibility') || 'classic';
-        const maxWidget = document.getElementsByClassName(MAXIMIZED_CLASS);
-        return preference === 'visible' || (preference === 'classic' && maxWidget.length === 0);
-    }
-
     createElectronContextMenu(menuPath: MenuPath, args?: any[]): Electron.Menu {
         const menuModel = this.menuProvider.getMenu(menuPath);
         const template = this.fillMenuTemplate([], menuModel, args, { showDisabled: false });
@@ -132,11 +128,11 @@ export class ElectronMainMenuFactory extends BrowserMainMenuFactory {
         return new Electron.Menu();
     }
 
-    protected fillMenuTemplate(items: TheiaElectron.MenuItemConstructorOptions[],
+    protected fillMenuTemplate(items: MenuItemConstructorOptions[],
         menuModel: CompositeMenuNode,
         args: any[] = [],
         options?: ElectronMenuOptions
-    ): TheiaElectron.MenuItemConstructorOptions[] {
+    ): MenuItemConstructorOptions[] {
         const showDisabled = (options?.showDisabled === undefined) ? true : options?.showDisabled;
         for (const menu of menuModel.children) {
             if (menu instanceof CompositeMenuNode) {
@@ -199,7 +195,7 @@ export class ElectronMainMenuFactory extends BrowserMainMenuFactory {
 
                 const accelerator = bindings[0] && this.acceleratorFor(bindings[0]);
 
-                const menuItem: TheiaElectron.MenuItemConstructorOptions = {
+                const menuItem: MenuItemConstructorOptions = {
                     id: node.id,
                     label: node.label,
                     type: this.commandRegistry.getToggledHandler(commandId, ...args) ? 'checkbox' : 'normal',
@@ -207,15 +203,14 @@ export class ElectronMainMenuFactory extends BrowserMainMenuFactory {
                     enabled: true, // https://github.com/eclipse-theia/theia/issues/446
                     visible: true,
                     accelerator,
-                    commandId,
-                    args
+                    click: { commandId, args }
                 };
 
                 if (isOSX) {
                     const role = this.roleFor(node.id);
                     if (role) {
                         menuItem.role = role;
-                        delete menuItem.commandId;
+                        delete menuItem.click;
                     }
                 }
                 items.push(menuItem);
@@ -230,7 +225,7 @@ export class ElectronMainMenuFactory extends BrowserMainMenuFactory {
         return items;
     }
 
-    protected handleElectronDefault(menuNode: MenuNode, args: any[] = [], options?: ElectronMenuOptions): TheiaElectron.MenuItemConstructorOptions[] {
+    protected handleElectronDefault(menuNode: MenuNode, args: any[] = [], options?: ElectronMenuOptions): MenuItemConstructorOptions[] {
         return [];
     }
 
@@ -299,7 +294,7 @@ export class ElectronMainMenuFactory extends BrowserMainMenuFactory {
         }
     }
 
-    protected createOSXMenu(): TheiaElectron.MenuItemConstructorOptions {
+    protected createOSXMenu(): MenuItemConstructorOptions {
         return {
             label: 'Theia',
             submenu: [

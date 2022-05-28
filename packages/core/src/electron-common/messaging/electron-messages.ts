@@ -18,7 +18,7 @@ export const RequestTitleBarStyle = 'requestTitleBarStyle';
 export const TitleBarStyleChanged = 'titleBarStyleChanged';
 export const TitleBarStyleAtStartup = 'titleBarStyleAtStartup';
 export const Restart = 'restart';
-export const UpdateMenubar = 'updateMenubar';
+export const SetMenu = 'setMenu';
 export const MenuItemClick = 'menuItemClick';
 /**
  * Emitted by main when close requested.

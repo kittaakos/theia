@@ -30,7 +30,7 @@ import {
 import { ElectronMainMenuFactory } from '@theia/core/lib/electron-browser/menu/electron-main-menu-factory';
 import { FrontendApplicationConfigProvider } from '@theia/core/lib/browser/frontend-application-config-provider';
 import { SampleUpdater, UpdateStatus, SampleUpdaterClient } from '../../common/updater/sample-updater';
-import { UpdateMenubar } from '@theia/core/lib/electron-common/messaging/electron-messages';
+import { SetMenu } from '@theia/core/lib/electron-common/messaging/electron-messages';
 
 export namespace SampleUpdaterCommands {
 
@@ -88,7 +88,7 @@ export class ElectronMenuUpdater {
 
     public update(): void {
         const template = this.factory.createElectronMenuBar();
-        ipcRenderer.send(UpdateMenubar, template);
+        ipcRenderer.send(SetMenu, template);
     }
 
 }

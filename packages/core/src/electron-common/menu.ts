@@ -16,16 +16,24 @@
 
 import type { MenuItemConstructorOptions as ElectronMenuItemConstructorOptions } from '../../electron-shared/electron';
 
-export namespace TheiaElectron {
-    export type MenuItemConstructorOptions = Omit<ElectronMenuItemConstructorOptions, 'click' | 'accelerator' | 'icon' | 'sharingItem' | 'submenu'> & {
-        /**
-         * The ID of the command to execute when clicked on the menu item.
-         */
-        commandId?: string;
+export type MenuItemConstructorOptions = Omit<ElectronMenuItemConstructorOptions, 'click' | 'accelerator' | 'icon' | 'sharingItem' | 'submenu'> & {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    click?: { commandId: string, args?: any[] };
+    accelerator?: string,
+    icon?: string,
+    submenu?: MenuItemConstructorOptions[],
+};
+export namespace MenuItemConstructorOptions {
+    export function toElectron(
+        options: MenuItemConstructorOptions,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        args?: any[],
-        accelerator?: string,
-        icon?: string,
-        submenu?: MenuItemConstructorOptions[],
-    };
+        clickHandler: ({ commandId, args }: { commandId: string, args?: any[] }) => () => void
+    ): ElectronMenuItemConstructorOptions {
+        const { click, submenu, ...rest } = options;
+        return {
+            ...rest,
+            ...click && { click: clickHandler(click) },
+            ...submenu && { submenu: submenu.map(subOption => toElectron(subOption, clickHandler)) }
+        };
+    }
 }

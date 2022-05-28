@@ -16,7 +16,7 @@
 
 import { inject, injectable, named } from 'inversify';
 import * as electronRemoteMain from '../../electron-shared/@electron/remote/main';
-import { Menu, MenuItemConstructorOptions } from '../../electron-shared/electron/index';
+import { Menu } from '../../electron-shared/electron/index';
 import { screen, ipcMain, app, BrowserWindow, Event as ElectronEvent } from '../../electron-shared/electron';
 import * as path from 'path';
 import { Argv } from 'yargs';
@@ -37,7 +37,7 @@ import {
     RequestTitleBarStyle,
     Restart,
     StopReason,
-    UpdateMenubar,
+    SetMenu,
     MenuItemClick,
     TitleBarStyleAtStartup,
     TitleBarStyleChanged
@@ -46,7 +46,7 @@ import { DEFAULT_WINDOW_HASH } from '../common/window';
 import { TheiaBrowserWindowOptions, TheiaElectronWindow, TheiaElectronWindowFactory } from './theia-electron-window';
 import { ElectronMainApplicationGlobals } from './electron-main-constants';
 import { createDisposableListener } from './event-utils';
-import { TheiaElectron } from '../electron-common/menu';
+import { MenuItemConstructorOptions } from '../electron-common/menu';
 
 export { ElectronMainApplicationGlobals };
 
@@ -522,30 +522,26 @@ export class ElectronMainApplication {
             sender.send(TitleBarStyleAtStartup, this.didUseNativeWindowFrameOnStart.get(sender.id) ? 'native' : 'custom');
         });
 
-        ipcMain.on(UpdateMenubar, ({ sender }, options: TheiaElectron.MenuItemConstructorOptions[] | null) => {
+        ipcMain.on(SetMenu, ({ sender }, options: MenuItemConstructorOptions[] | null) => {
             const browserWindow = BrowserWindow.fromId(sender.id);
             if (!browserWindow) {
-                console.warn(UpdateMenubar, `no BrowserWindow with id: ${sender.id}`);
+                console.warn(SetMenu, `no BrowserWindow with id: ${sender.id}`);
                 return;
             }
             // eslint-disable-next-line no-null/no-null
             let menu: Menu | null = null;
             if (options) {
-                function toElectron(from: TheiaElectron.MenuItemConstructorOptions): MenuItemConstructorOptions {
-                    const { submenu, commandId, args, ...rest } = from;
-                    const to = {
-                        ...rest,
-                        click: commandId ? () => sender.send(MenuItemClick, { commandId, args }) : undefined,
-                        submenu: submenu?.map(toElectron)
-                    };
-                    return to;
-                }
-                const template = options.map(toElectron);
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const clickHandler = ({ commandId, args }: { commandId: string, args?: any[] }) =>
+                    () => sender.send(MenuItemClick, { commandId, args });
+                const template = options
+                    .map(o => MenuItemConstructorOptions.toElectron(o, clickHandler));
                 menu = Menu.buildFromTemplate(template);
             }
             if (isOSX) {
                 Menu.setApplicationMenu(menu);
             } else {
+                // Unix/Windows: Set the per-window menus
                 browserWindow.setMenu(menu);
             }
         });
