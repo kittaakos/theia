@@ -14,7 +14,7 @@
 // SPDX-License-Identifier: EPL-2.0 OR GPL-2.0 WITH Classpath-exception-2.0
 // *****************************************************************************
 
-import { ContainerModule, interfaces } from '@theia/core/shared/inversify';
+import { ContainerModule, inject, injectable, interfaces } from '@theia/core/shared/inversify';
 import { bindDynamicLabelProvider } from './label/sample-dynamic-label-provider-command-contribution';
 import { bindSampleFilteredCommandContribution } from './contribution-filter/sample-filtered-command-contribution';
 import { bindSampleUnclosableView } from './view/sample-unclosable-view-contribution';
@@ -26,6 +26,9 @@ import { bindSampleToolbarContribution } from './toolbar/sample-toolbar-contribu
 
 import '../../src/browser/style/branding.css';
 import { bindMonacoPreferenceExtractor } from './monaco-editor-preferences/monaco-editor-preference-extractor';
+import { CommandContribution, CommandRegistry } from '@theia/core';
+import { EditorManager } from '@theia/editor/lib/browser';
+import { ApplicationShell, FrontendApplication, FrontendApplicationContribution } from '@theia/core/lib/browser';
 
 export default new ContainerModule((
     bind: interfaces.Bind,
@@ -42,4 +45,50 @@ export default new ContainerModule((
     bindSampleFilteredCommandContribution(bind);
     bindSampleToolbarContribution(bind, rebind);
     bindMonacoPreferenceExtractor(bind);
+    bind(RevealInEditorContribution).toSelf().inSingletonScope();
+    bind(CommandContribution).toService(RevealInEditorContribution);
+    bind(FrontendApplicationContribution).toService(RevealInEditorContribution);
 });
+
+@injectable()
+class RevealInEditorContribution implements CommandContribution, FrontendApplicationContribution {
+
+    @inject(EditorManager)
+    private readonly editorManager: EditorManager;
+    private shell: ApplicationShell;
+
+    onStart(app: FrontendApplication): void {
+        this.shell = app.shell;
+    }
+
+    registerCommands(commands: CommandRegistry): void {
+        commands.registerCommand({ id: 'reveal-in-editor', label: 'Reveal in editor' }, {
+            execute: async () => {
+                const current = this.editorManager.currentEditor;
+                const active = this.editorManager.activeEditor;
+                const hidden = this.editorManager.all.filter(editor => editor !== current && editor !== active)[0];
+                if (!hidden) {
+                    console.warn('Please open at least two editors');
+                } else {
+                    console.info('Revealing position in editor: ' + hidden.editor.uri);
+                    this.editorManager.getByUri(hidden.editor.uri, { mode: 'activate', selection: { start: { line: 1, character: 1 } } });
+                }
+            }
+        });
+        commands.registerCommand({ id: 'reveal-in-editor2', label: 'Reveal in editor 2' }, {
+            execute: async () => {
+                const current = this.editorManager.currentEditor;
+                const active = this.editorManager.activeEditor;
+                const hidden = this.editorManager.all.filter(editor => editor !== current && editor !== active)[0];
+                if (!hidden) {
+                    console.warn('Please open at least two editors');
+                } else {
+                    await this.shell.activateWidget(hidden.id);
+                    console.info('Revealing position in editor: ' + hidden.editor.uri);
+                    hidden.editor.revealPosition({ line: 1, character: 1 });
+                }
+            }
+        });
+    }
+
+}
