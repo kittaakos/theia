@@ -5,6 +5,7 @@
   "description": "Theia - Example code to demonstrate Theia API",
   "dependencies": {
     "@theia/core": "1.26.0",
+    "@theia/editor": "1.26.0",
     "@theia/file-search": "1.26.0",
     "@theia/filesystem": "1.26.0",
     "@theia/monaco-editor-core": "1.65.2",
