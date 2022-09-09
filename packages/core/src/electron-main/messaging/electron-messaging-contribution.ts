@@ -57,7 +57,7 @@ export class ElectronMessagingContribution implements ElectronMainApplicationCon
 
     protected handleIpcEvent(event: IpcMainEvent, data: Uint8Array): void {
         const sender = event.sender;
-        // Get the multiplexer for a given window id
+        // Get the multiplexer for a given window's webContents ID
         try {
             const windowChannelData = this.windowChannelMultiplexer.get(sender.id) ?? this.createWindowChannelData(sender);
             windowChannelData!.channel.onMessageEmitter.fire(() => new Uint8ArrayReadBuffer(data));
@@ -78,8 +78,16 @@ export class ElectronMessagingContribution implements ElectronMainApplicationCon
             }
         });
 
-        sender.once('did-navigate', () => multiplexer.onUnderlyingChannelClose({ reason: 'Window was refreshed' })); // When refreshing the browser window.
-        sender.once('destroyed', () => multiplexer.onUnderlyingChannelClose({ reason: 'Window was closed' })); // When closing the browser window.
+        // When refreshing the browser window.
+        sender.once('did-navigate', () => {
+            multiplexer.onUnderlyingChannelClose({ reason: 'Window was refreshed' });
+            this.windowChannelMultiplexer.delete(sender.id);
+        });
+        // When closing the browser window.
+        sender.once('destroyed', () => {
+            multiplexer.onUnderlyingChannelClose({ reason: 'Window was closed' });
+            this.windowChannelMultiplexer.delete(sender.id);
+        });
         const data = { channel: mainChannel, multiplexer };
         this.windowChannelMultiplexer.set(sender.id, data);
         return data;

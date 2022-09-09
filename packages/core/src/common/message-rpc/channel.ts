@@ -206,7 +206,7 @@ export class ChannelMultiplexer implements Disposable {
             const channel = this.createChannel(id);
             this.pendingOpen.delete(id);
             this.openChannels.set(id, channel);
-            resolve!(channel);
+            resolve(channel);
             this.onOpenChannelEmitter.fire({ id, channel });
         }
     }
