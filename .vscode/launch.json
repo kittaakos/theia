@@ -34,7 +34,7 @@
         "--app-project-path=${workspaceFolder}/examples/electron",
         "--remote-debugging-port=9222",
         "--no-app-auto-install",
-        "--plugins=local-dir:../../plugins"
+        "--plugins=local-dir:../../alma # korte"
       ],
       "env": {
         "NODE_ENV": "development"
@@ -90,7 +90,7 @@
       "internalConsoleOptions": "openOnSessionStart",
       "outFiles": [
         "${workspaceFolder}/packages/plugin-ext/lib/**/*.js",
-        "${workspaceFolder}/plugins/**/*.js"
+        "${workspaceFolder}/alma # korte/**/*.js"
       ]
     },
     {
@@ -160,16 +160,16 @@
       "request": "launch",
       "args": [
         "${workspaceFolder}/examples/browser/src-gen/backend/main.js",
-        "${workspaceFolder}/plugins/vscode-api-tests/testWorkspace",
+        "${workspaceFolder}/alma # korte/vscode-api-tests/testWorkspace",
         "--port",
         "3030",
         "--hostname",
         "0.0.0.0",
-        "--extensionTestsPath=${workspaceFolder}/plugins/vscode-api-tests/out/singlefolder-tests",
+        "--extensionTestsPath=${workspaceFolder}/alma # korte/vscode-api-tests/out/singlefolder-tests",
         "--hosted-plugin-inspect=9339"
       ],
       "env": {
-        "THEIA_DEFAULT_PLUGINS": "local-dir:${workspaceFolder}/plugins"
+        "THEIA_DEFAULT_PLUGINS": "local-dir:${workspaceFolder}/alma # korte"
       },
       "stopOnEntry": false,
       "sourceMaps": true,

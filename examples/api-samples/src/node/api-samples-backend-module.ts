@@ -14,12 +14,19 @@
 // SPDX-License-Identifier: EPL-2.0 OR GPL-2.0 WITH Classpath-exception-2.0
 // *****************************************************************************
 
-import { ContainerModule } from '@theia/core/shared/inversify';
+import { ContainerModule, interfaces } from '@theia/core/shared/inversify';
 import { BackendApplicationServer } from '@theia/core/lib/node';
 import { SampleBackendApplicationServer } from './sample-backend-application-server';
+import { bindPluginDeployerContribution } from './plugin-deployer-gh-12064';
 
-export default new ContainerModule(bind => {
+export default new ContainerModule((
+    bind: interfaces.Bind,
+    unbind: interfaces.Unbind,
+    isBound: interfaces.IsBound,
+    rebind: interfaces.Rebind,
+) => {
     if (process.env.SAMPLE_BACKEND_APPLICATION_SERVER) {
         bind(BackendApplicationServer).to(SampleBackendApplicationServer).inSingletonScope();
     }
+    bindPluginDeployerContribution(bind, rebind);
 });

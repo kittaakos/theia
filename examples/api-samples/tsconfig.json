@@ -25,6 +25,9 @@
       "path": "../../packages/output"
     },
     {
+      "path": "../../packages/plugin-ext"
+    },
+    {
       "path": "../../packages/search-in-workspace"
     },
     {
