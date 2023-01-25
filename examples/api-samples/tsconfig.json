@@ -13,6 +13,9 @@
       "path": "../../packages/core"
     },
     {
+      "path": "../../packages/editor"
+    },
+    {
       "path": "../../packages/file-search"
     },
     {

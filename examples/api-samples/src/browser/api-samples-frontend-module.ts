@@ -14,7 +14,7 @@
 // SPDX-License-Identifier: EPL-2.0 OR GPL-2.0 WITH Classpath-exception-2.0
 // *****************************************************************************
 
-import { ContainerModule, interfaces } from '@theia/core/shared/inversify';
+import { ContainerModule, inject, injectable, interfaces } from '@theia/core/shared/inversify';
 import { bindDynamicLabelProvider } from './label/sample-dynamic-label-provider-command-contribution';
 import { bindSampleFilteredCommandContribution } from './contribution-filter/sample-filtered-command-contribution';
 import { bindSampleUnclosableView } from './view/sample-unclosable-view-contribution';
@@ -26,6 +26,10 @@ import { bindSampleToolbarContribution } from './toolbar/sample-toolbar-contribu
 
 import '../../src/browser/style/branding.css';
 import { bindMonacoPreferenceExtractor } from './monaco-editor-preferences/monaco-editor-preference-extractor';
+import { CommandContribution, CommandRegistry } from '@theia/core/lib/common/command';
+import URI from '@theia/core/lib/common/uri';
+import { WorkspaceDeleteHandler } from '@theia/workspace/lib/browser/workspace-delete-handler';
+import { EditorManager } from '@theia/editor/lib/browser/editor-manager';
 
 export default new ContainerModule((
     bind: interfaces.Bind,
@@ -42,4 +46,28 @@ export default new ContainerModule((
     bindSampleFilteredCommandContribution(bind);
     bindSampleToolbarContribution(bind, rebind);
     bindMonacoPreferenceExtractor(bind);
+    bind(CloseCurrentEditorWithoutSaveCommandContribution).toSelf().inSingletonScope();
+    bind(CommandContribution).toService(CloseCurrentEditorWithoutSaveCommandContribution);
 });
+
+@injectable()
+class CloseCurrentEditorWithoutSaveCommandContribution implements CommandContribution {
+    @inject(WorkspaceDeleteHandler) private readonly deleteHandler: WorkspaceDeleteHandler;
+    @inject(EditorManager) private readonly editorManager: EditorManager;
+
+    registerCommands(commands: CommandRegistry): void {
+        commands.registerCommand({ id: 'api-sample-close-current-editor', label: 'API Sample: Close Current Editor' }, {
+            execute: () => {
+                const uri = this.currentEditorUri();
+                if (uri) {
+                    this.deleteHandler['closeWithoutSaving'](uri);
+                }
+            },
+            isEnabled: () => Boolean(this.currentEditorUri()),
+        });
+    }
+
+    private currentEditorUri(): URI | undefined {
+        return this.editorManager.currentEditor?.getResourceUri();
+    }
+}
