@@ -14,7 +14,7 @@
 // SPDX-License-Identifier: EPL-2.0 OR GPL-2.0 WITH Classpath-exception-2.0
 // *****************************************************************************
 
-import { ContainerModule, interfaces } from '@theia/core/shared/inversify';
+import { ContainerModule, inject, injectable, interfaces } from '@theia/core/shared/inversify';
 import { bindDynamicLabelProvider } from './label/sample-dynamic-label-provider-command-contribution';
 import { bindSampleFilteredCommandContribution } from './contribution-filter/sample-filtered-command-contribution';
 import { bindSampleUnclosableView } from './view/sample-unclosable-view-contribution';
@@ -26,6 +26,12 @@ import { bindSampleToolbarContribution } from './toolbar/sample-toolbar-contribu
 
 import '../../src/browser/style/branding.css';
 import { bindMonacoPreferenceExtractor } from './monaco-editor-preferences/monaco-editor-preference-extractor';
+import URI from '@theia/core/lib/common/uri';
+import { CommandContribution, CommandRegistry, CommandService } from '@theia/core/lib/common/command';
+import { KeybindingContribution, KeybindingRegistry } from '@theia/core/lib/browser/keybinding';
+import { EditorManager } from '@theia/editor/lib/browser/editor-manager';
+import { MessageService } from '@theia/core/lib/common/message-service';
+import { WorkspaceCommands } from '@theia/workspace/lib/browser/workspace-commands';
 
 export default new ContainerModule((
     bind: interfaces.Bind,
@@ -42,4 +48,42 @@ export default new ContainerModule((
     bindSampleFilteredCommandContribution(bind);
     bindSampleToolbarContribution(bind, rebind);
     bindMonacoPreferenceExtractor(bind);
+    bind(ToastCurrentEditorContributions).toSelf().inSingletonScope();
+    bind(CommandContribution).toService(ToastCurrentEditorContributions);
+    bind(KeybindingContribution).toService(ToastCurrentEditorContributions);
 });
+
+@injectable()
+class ToastCurrentEditorContributions implements CommandContribution, KeybindingContribution {
+    @inject(EditorManager) private readonly editorManager: EditorManager;
+    @inject(MessageService) private readonly messageService: MessageService;
+    @inject(CommandService) private readonly commandService: CommandService;
+
+    registerCommands(registry: CommandRegistry): void {
+        registry.registerCommand({ id: 'api-sample-toast-current-editor' }, {
+            execute: () => this.messageService.info(
+                `Current editor URI: ${this.currentEditorUri?.toString()}`,
+                { timeout: 2_000 }
+            )
+        });
+        registry.registerCommand({ id: 'api-sample-rename-current-editor' }, {
+            execute: () => this.commandService.executeCommand(WorkspaceCommands.FILE_RENAME.id, [this.currentEditorUri]),
+            isEnabled: () => Boolean(this.currentEditorUri)
+        });
+    }
+
+    registerKeybindings(registry: KeybindingRegistry): void {
+        registry.registerKeybinding({
+            command: 'api-sample-toast-current-editor',
+            keybinding: 'ctrlcmd+k k'
+        });
+        registry.registerKeybinding({
+            command: 'api-sample-rename-current-editor',
+            keybinding: 'ctrlcmd+k r'
+        });
+    }
+
+    private get currentEditorUri(): URI | undefined {
+        return this.editorManager.currentEditor?.getResourceUri();
+    }
+}
