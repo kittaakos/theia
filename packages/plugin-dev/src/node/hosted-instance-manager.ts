@@ -17,7 +17,7 @@
 import { RequestOptions, RequestService } from '@theia/core/shared/@theia/request';
 import { inject, injectable, named } from '@theia/core/shared/inversify';
 import * as cp from 'child_process';
-import * as fs from '@theia/core/shared/fs-extra';
+import { promises as fs } from 'fs';
 import * as net from 'net';
 import * as path from 'path';
 import URI from '@theia/core/lib/common/uri';
@@ -84,7 +84,7 @@ export interface HostedInstanceManager {
      *
      * @param uri uri to the plugin source location
      */
-    isPluginValid(uri: URI): boolean;
+    isPluginValid(uri: URI): Promise<boolean>;
 }
 
 const HOSTED_INSTANCE_START_TIMEOUT_MS = 30000;
@@ -224,19 +224,21 @@ export abstract class AbstractHostedInstanceManager implements HostedInstanceMan
         }
     }
 
-    isPluginValid(uri: URI): boolean {
+    async isPluginValid(uri: URI): Promise<boolean> {
         const pckPath = path.join(FileUri.fsPath(uri), 'package.json');
-        if (fs.existsSync(pckPath)) {
-            const pck = fs.readJSONSync(pckPath);
-            try {
-                this.metadata.getScanner(pck);
-                return true;
-            } catch (e) {
-                console.error(e);
-                return false;
+        try {
+            const content = await fs.readFile(pckPath, { encoding: 'utf8' });
+            const pck = JSON.parse(content);
+            this.metadata.getScanner(pck);
+            return true;
+        } catch (err) {
+            if (err instanceof Error && 'code' in err && err['code'] === 'ENOENT') {
+                // ignore error logging if package.json is missing
+            } else {
+                console.error(err);
             }
+            return false;
         }
-        return false;
     }
 
     protected async getStartCommand(port?: number, debugConfig?: PluginDebugConfiguration): Promise<string[]> {

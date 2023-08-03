@@ -18,8 +18,10 @@ import { PluginDeployerFileHandler, PluginDeployerEntry, PluginDeployerFileHandl
 import * as fs from '@theia/core/shared/fs-extra';
 import * as path from 'path';
 import * as filenamify from 'filenamify';
-import { injectable, inject } from '@theia/core/shared/inversify';
-import { getTempDir } from '@theia/plugin-ext/lib/main/node/temp-dir-util';
+import type { URI } from '@theia/core';
+import { inject, injectable } from '@theia/core/shared/inversify';
+import { Deferred } from '@theia/core/lib/common/promise-util';
+import { getTempDirAsync } from '@theia/plugin-ext/lib/main/node/temp-dir-util';
 import { PluginVSCodeEnvironment } from '../common/plugin-vscode-environment';
 import { FileUri } from '@theia/core/lib/node/file-uri';
 
@@ -31,10 +33,17 @@ export class PluginVsCodeFileHandler implements PluginDeployerFileHandler {
     @inject(PluginVSCodeEnvironment)
     protected readonly environment: PluginVSCodeEnvironment;
 
-    private readonly systemExtensionsDirUri = FileUri.create(getTempDir('vscode-unpacked'));
+    private readonly systemExtensionsDirUri: Deferred<URI>;
 
-    accept(resolvedPlugin: PluginDeployerEntry): boolean {
-        if (!resolvedPlugin.isFile()) {
+    constructor() {
+        this.systemExtensionsDirUri = new Deferred();
+        getTempDirAsync('vscode-unpacked')
+            .then(deploymentDirectory => this.systemExtensionsDirUri.resolve(FileUri.create(deploymentDirectory)));
+    }
+
+    async accept(resolvedPlugin: PluginDeployerEntry): Promise<boolean> {
+        const file = await resolvedPlugin.isFile();
+        if (!file) {
             return false;
         }
         return isVSCodePluginFile(resolvedPlugin.path());
@@ -55,7 +64,8 @@ export class PluginVsCodeFileHandler implements PluginDeployerFileHandler {
     }
 
     protected async getExtensionDir(context: PluginDeployerFileHandlerContext): Promise<string> {
-        return FileUri.fsPath(this.systemExtensionsDirUri.resolve(filenamify(context.pluginEntry().id(), { replacement: '_' })));
+        const systemExtensionsDirUri = await this.systemExtensionsDirUri.promise;
+        return FileUri.fsPath(systemExtensionsDirUri.resolve(filenamify(context.pluginEntry().id(), { replacement: '_' })));
     }
 
     protected async decompress(extensionDir: string, context: PluginDeployerFileHandlerContext): Promise<void> {

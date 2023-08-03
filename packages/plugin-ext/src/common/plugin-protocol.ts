@@ -376,7 +376,7 @@ export interface PluginDeployerResolver {
 
 export const PluginDeployerDirectoryHandler = Symbol('PluginDeployerDirectoryHandler');
 export interface PluginDeployerDirectoryHandler {
-    accept(pluginDeployerEntry: PluginDeployerEntry): boolean;
+    accept(pluginDeployerEntry: PluginDeployerEntry): Promise<boolean>;
 
     handle(context: PluginDeployerDirectoryHandlerContext): Promise<void>;
 }
@@ -384,7 +384,7 @@ export interface PluginDeployerDirectoryHandler {
 export const PluginDeployerFileHandler = Symbol('PluginDeployerFileHandler');
 export interface PluginDeployerFileHandler {
 
-    accept(pluginDeployerEntry: PluginDeployerEntry): boolean;
+    accept(pluginDeployerEntry: PluginDeployerEntry): Promise<boolean>;
 
     handle(context: PluginDeployerFileHandlerContext): Promise<void>;
 }
@@ -477,9 +477,9 @@ export interface PluginDeployerEntry {
 
     getChanges(): string[];
 
-    isFile(): boolean;
+    isFile(): Promise<boolean>;
 
-    isDirectory(): boolean;
+    isDirectory(): Promise<boolean>;
 
     /**
      * Resolved if a resolver has handle this plugin
