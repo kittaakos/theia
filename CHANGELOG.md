@@ -44,6 +44,7 @@
     - `visual`: Display a visual preview of the tab. (The preview support was added with this PR)
 - [repo] updated GitHub workflow to stop publishing `next` versions [#12699](https://github.com/eclipse-theia/theia/pull/12699)
 - [workspace] split `CommonWorkspaceUtils` into `WorkspaceFileService` and `UntitledWorkspaceService` [#12420](https://github.com/eclipse-theia/theia/pull/12420)
+- [plugin-ext] Read plugin contributions asynchronously. Changed `PluginScanner#getContribution` from sync to async. The `protected` Theia and grammar scanner APIs were affected: they have been adjusted to async. [#12798](https://github.com/eclipse-theia/theia/pull/12798)
 
 ## v1.39.0 - 06/29/2023
 

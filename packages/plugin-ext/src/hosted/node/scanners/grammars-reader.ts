@@ -17,15 +17,15 @@
 import { injectable } from '@theia/core/shared/inversify';
 import { PluginPackageGrammarsContribution, GrammarsContribution } from '../../../common';
 import * as path from 'path';
-import * as fs from '@theia/core/shared/fs-extra';
+import { promises as fs } from 'fs';
 
 @injectable()
 export class GrammarsReader {
 
-    readGrammars(rawGrammars: PluginPackageGrammarsContribution[], pluginPath: string): GrammarsContribution[] {
+    async readGrammars(rawGrammars: PluginPackageGrammarsContribution[], pluginPath: string): Promise<GrammarsContribution[]> {
         const result = new Array<GrammarsContribution>();
         for (const rawGrammar of rawGrammars) {
-            const grammar = this.readGrammar(rawGrammar, pluginPath);
+            const grammar = await this.readGrammar(rawGrammar, pluginPath);
             if (grammar) {
                 result.push(grammar);
             }
@@ -34,13 +34,12 @@ export class GrammarsReader {
         return result;
     }
 
-    private readGrammar(rawGrammar: PluginPackageGrammarsContribution, pluginPath: string): GrammarsContribution | undefined {
+    private async readGrammar(rawGrammar: PluginPackageGrammarsContribution, pluginPath: string): Promise<GrammarsContribution | undefined> {
         // TODO: validate inputs
         let grammar: string | object;
+        grammar = await fs.readFile(path.resolve(pluginPath, rawGrammar.path), { encoding: 'utf8' });
         if (rawGrammar.path.endsWith('json')) {
-            grammar = fs.readJSONSync(path.resolve(pluginPath, rawGrammar.path));
-        } else {
-            grammar = fs.readFileSync(path.resolve(pluginPath, rawGrammar.path), 'utf8');
+            grammar = JSON.parse(grammar);
         }
         return {
             language: rawGrammar.language,

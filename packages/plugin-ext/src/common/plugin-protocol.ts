@@ -348,7 +348,7 @@ export interface PluginScanner {
      */
     getLifecycle(plugin: PluginPackage): PluginLifecycle;
 
-    getContribution(plugin: PluginPackage): PluginContribution | undefined;
+    getContribution(plugin: PluginPackage): Promise<PluginContribution | undefined>;
 
     /**
      * A mapping between a dependency as its defined in package.json
