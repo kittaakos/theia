@@ -32,12 +32,12 @@ export class LocalizationBackendContribution implements BackendApplicationContri
     @inject(LocalizationProvider)
     protected readonly localizationProvider: LocalizationProvider;
 
-    async initialize(): Promise<void> {
-        await this.localizationRegistry.initialize();
-        this.initialized.resolve();
+    initialize(): void {
+        this.localizationRegistry.initialize()
+            .then(() => this.initialized.resolve(), reason => this.initialized.reject(reason));
     }
 
-    waitForInitialization(): Promise<void> {
+    protected waitForInitialization(): Promise<void> {
         return this.initialized.promise;
     }
 
